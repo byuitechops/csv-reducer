@@ -1,0 +1,19 @@
+{
+  "name": "ec3-csv-converter",
+  "version": "1.0.0",
+  "description": "CSV Converter for EC3 (English Connect 3)",
+  "main": "main.js",
+  "scripts": {
+    "start": ""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/byuitechops/ec3-csv-converter.git"
+  },
+  "author": "Aaron Shiffler",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/byuitechops/ec3-csv-converter/issues"
+  },
+  "homepage": "https://github.com/byuitechops/ec3-csv-converter#readme"
+}
