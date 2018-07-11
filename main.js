@@ -53,10 +53,12 @@ const editCSV = function(reducedValue, initialCSV, options, reducerFunction){
 // access to the methods without auto-getnerating the usual end-result
 class ModifiedCSV {
     constructor(initialCSV, options, reducerFunction){
-        this.newCSV = this.removeBOM(initialCSV);
-        this.parsedCSV = this.parseCSV(this.newCSV);
-        this.reducedValue = this.csvReducer(this.parsedCSV, options, reducerFunction);
-        this.newCSV = this.editCSV(this.reducedValue, this.newCSV, options, reducerFunction);
+        if(initialCSV){
+            this.newCSV = this.removeBOM(initialCSV);
+            this.parsedCSV = this.parseCSV(this.newCSV);
+            this.reducedValue = this.csvReducer(this.parsedCSV, options, reducerFunction);
+            this.newCSV = this.editCSV(this.reducedValue, this.newCSV, options, reducerFunction);
+        }
     }
     // below are data modifying methods, these might be able to be removed from the class 
     // unless we want to let the user access them even after they've been 
@@ -74,12 +76,22 @@ class ModifiedCSV {
 /********************************************************************
  * Here is a quick on-page test of how the class would work:
 *********************************************************************/
+console.log('\nSTART FULL-CONSTRUCTOR TEST:');
 var tester = new ModifiedCSV(target, {initAcc:[]}, function(acc, curr){acc.push(curr); return acc;});
 console.log(tester.getCSV());
 console.log(tester.getObject());
 // This is interesting because you will still get your file with no BOM at the beginning returned,
 // but it can be any document you want, unrelated to the .getObject and .getCSV values.
 tester.removeBOM(target); 
+
+/********************************************************************
+ * Here is a quick test of the class with an empty constructor.
+*********************************************************************/
+console.log('\nSTART EMPTY-CONTRUCTOR TEST:');
+var emptyTest = new ModifiedCSV();
+emptyTest.removeBOM(target);
+console.log(emptyTest.getCSV());
+console.log();
 
 /********************************************************************
  * a new class (or object) created based on the given parameters would be the export
