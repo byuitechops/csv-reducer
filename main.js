@@ -40,15 +40,17 @@ const csvReducer = function(csvToReduce, options, reducerFunction){
 /********************************************************************
  * editCSV 
 *********************************************************************/
-const editCSV = function(){
+const editCSV = function(reducedValue, initialCSV, options, reducerFunction){
     // Choose what to do here based on options
     console.log('Here is the editCSV Function');
-    return '<Editted CSV Here>';
+    return '\'Editted CSV Here\'';
 }
 
 /********************************************************************
  * 
 *********************************************************************/
+// ***By adding another signature, we could give the user the option to 
+// access to the methods without auto-getnerating the usual end-result
 class ModifiedCSV {
     constructor(initialCSV, options, reducerFunction){
         this.newCSV = this.removeBOM(initialCSV);
@@ -63,7 +65,7 @@ class ModifiedCSV {
     parseCSV(csvToParse){return parseCSV(csvToParse);}
     csvReducer(csvToReduce, options, reducerFunction){return csvReducer(csvToReduce, options, reducerFunction);}
     // It will take a strategic approach to make sure a csv output reflects the reduced value
-    editCSV(reducedValue, baseCSV, options, reducerFunction){return editCSV(reducedValue, baseCSV, options, reducerFunction);} 
+    editCSV(reducedValue, initialCSV, options, reducerFunction){return editCSV(reducedValue, initialCSV, options, reducerFunction);} 
     // getters
     getObject(){return this.reducedValue;}
     getCSV(){return this.newCSV;}
@@ -75,7 +77,7 @@ class ModifiedCSV {
 var tester = new ModifiedCSV(target, {initAcc:[]}, function(acc, curr){acc.push(curr); return acc;});
 console.log(tester.getCSV());
 console.log(tester.getObject());
-// This is interesting because you will still get a csv with no BOM at the beginning returned,
+// This is interesting because you will still get your file with no BOM at the beginning returned,
 // but it can be any document you want, unrelated to the .getObject and .getCSV values.
 tester.removeBOM(target); 
 
