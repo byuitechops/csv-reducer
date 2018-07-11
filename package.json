@@ -1,5 +1,5 @@
 {
-  "name": "ec3-csv-converter",
+  "name": "csv-reducer",
   "version": "1.0.0",
   "description": "CSV Converter for EC3 (English Connect 3)",
   "main": "main.js",
@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/byuitechops/ec3-csv-converter/issues"
   },
-  "homepage": "https://github.com/byuitechops/ec3-csv-converter#readme"
+  "homepage": "https://github.com/byuitechops/ec3-csv-converter#readme",
+  "dependencies": {
+    "d3-dsv": "^1.0.8"
+  }
 }

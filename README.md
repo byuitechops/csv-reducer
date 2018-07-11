@@ -1,2 +1,2 @@
-# ec3-csv-converter
-CSV Converter for EC3 (English Connect 3).
+# csv-reducer
+A handy tool to process csv documents in anyway a reduce function can.
