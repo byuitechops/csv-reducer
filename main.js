@@ -46,8 +46,6 @@ const editCSV = function(reducedValue, initialCSV, options, reducerFunction){
 /********************************************************************
  * 
 *********************************************************************/
-// ***By adding another signature, we could give the user the option to 
-// access to the methods without auto-getnerating the usual end-result
 class ModifiedCSV {
     constructor(initialCSV, options, reducerFunction){
         if(initialCSV){
@@ -71,8 +69,5 @@ class ModifiedCSV {
  * a new class (or object) created based on the given parameters would be the export
 *********************************************************************/
 module.exports = (initialCSV, options, reducerFunction) => {
-    // the whole class could be returned, which would include its methods
-    // but otherwise just its ModifiedCSV.getObject and ModifiedCSV.getCSV values
-    // could be returned as an object.
     return new ModifiedCSV(initialCSV, options, reducerFunction);
 }
