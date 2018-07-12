@@ -2,9 +2,6 @@
  * Require Dependancies Here
 *********************************************************************/
 const dsv = require('d3-dsv');
-// these two variables can be removed later
-const fs =  require('fs');
-const target = './csv-tests/countriesDummyData.csv';
 
 /********************************************************************
  * This will check for and remove the Byte-Order-Mark if it exists
@@ -60,13 +57,10 @@ class ModifiedCSV {
             this.newCSV = this.editCSV(this.reducedValue, this.newCSV, options, reducerFunction);
         }
     }
-    // below are data modifying methods, these might be able to be removed from the class 
-    // unless we want to let the user access them even after they've been 
-    // used the first time in the constructor.
+    // methods
     removeBOM(stringWithBOM){return removeBOM(stringWithBOM);}
     parseCSV(csvToParse){return parseCSV(csvToParse);}
     csvReducer(csvToReduce, options, reducerFunction){return csvReducer(csvToReduce, options, reducerFunction);}
-    // It will take a strategic approach to make sure a csv output reflects the reduced value
     editCSV(reducedValue, initialCSV, options, reducerFunction){return editCSV(reducedValue, initialCSV, options, reducerFunction);} 
     // getters
     getObject(){return this.reducedValue;}
@@ -74,29 +68,27 @@ class ModifiedCSV {
 }
 
 /********************************************************************
- * Here is a quick on-page test of how the class would work:
+ * BELOW: Experimenting and templating options parameter :BELOW
 *********************************************************************/
-console.log('\nSTART FULL-CONSTRUCTOR TEST:');
-var tester = new ModifiedCSV(target, {initAcc:[]}, function(acc, curr){acc.push(curr); return acc;});
-console.log(tester.getCSV());
-console.log(tester.getObject());
-// This is interesting because you will still get your file with no BOM at the beginning returned,
-// but it can be any document you want, unrelated to the .getObject and .getCSV values.
-tester.removeBOM(target); 
-
+var optionsStyle2 = 
+{
+    verifyHeaders:[], // Check/Verify: Do these headers exist? empty = dont check
+    headersOut:[], // Which headers should exist in the outputted csv
+    initAcc:[], // What is accumulator should be used on the reduce
+    run:
+    {
+        reduce: false,
+        // insert more options here for methods to reduce
+    }
+}
 /********************************************************************
- * Here is a quick test of the class with an empty constructor.
+ * ABOVE: Experimenting and templating options parameter :ABOVE
 *********************************************************************/
-console.log('\nSTART EMPTY-CONTRUCTOR TEST:');
-var emptyTest = new ModifiedCSV();
-emptyTest.removeBOM(target);
-console.log(emptyTest.getCSV());
-console.log();
 
 /********************************************************************
  * a new class (or object) created based on the given parameters would be the export
 *********************************************************************/
-module.export= (initialCSV, options, reducerFunction) => {
+module.exports = (initialCSV, options, reducerFunction) => {
     // the whole class could be returned, which would include its methods
     // but otherwise just its ModifiedCSV.getObject and ModifiedCSV.getCSV values
     // could be returned as an object.
