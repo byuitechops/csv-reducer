@@ -68,24 +68,6 @@ class ModifiedCSV {
 }
 
 /********************************************************************
- * BELOW: Experimenting and templating options parameter :BELOW
-*********************************************************************/
-var optionsStyle2 = 
-{
-    verifyHeaders:[], // Check/Verify: Do these headers exist? empty = dont check
-    headersOut:[], // Which headers should exist in the outputted csv
-    initAcc:[], // What is accumulator should be used on the reduce
-    run:
-    {
-        reduce: false,
-        // insert more options here for methods to reduce
-    }
-}
-/********************************************************************
- * ABOVE: Experimenting and templating options parameter :ABOVE
-*********************************************************************/
-
-/********************************************************************
  * a new class (or object) created based on the given parameters would be the export
 *********************************************************************/
 module.exports = (initialCSV, options, reducerFunction) => {
