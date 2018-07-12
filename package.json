@@ -1,7 +1,7 @@
 {
   "name": "csv-reducer",
   "version": "1.0.0",
-  "description": "CSV Converter for EC3 (English Connect 3)",
+  "description": "A handy tool to process csv documents in anyway a reduce function can.",
   "main": "main.js",
   "scripts": {
     "start": ""
