@@ -1,4 +1,4 @@
-id,Country,Continent,fhs,gov,Capital,pnr,Topography,Climate,le,imr,pcod,GDPPC,cer,bmi,gdpg,ii,cpi,hioef,lr,Religions,Languages,Population,
+id,Country,Continent,fhs,gov,Capital,pnr,Topography,Climate,le,imr,pcod,GDPPC,cer,bmi,gdpg,ii,cpi,hioef,lr,Religions,Languages,Population
 id_name_0,Country_name_0,Continent_name_0,fhs_name_0,gov_name_0,Capital_name_0,pnr_name_0,Topography_name_0,Climate_name_0,le_name_0,imr_name_0,pcod_name_0,GDPPC_name_0,cer_name_0,bmi_name_0,gdpg_name_0,ii_name_0,cpi_name_0,hioef_name_0,lr_name_0,Religions_name_0,Languages_name_0,Population_name_0
 id_name_1,Country_name_1,Continent_name_1,fhs_name_1,gov_name_1,Capital_name_1,pnr_name_1,Topography_name_1,Climate_name_1,le_name_1,imr_name_1,pcod_name_1,GDPPC_name_1,cer_name_1,bmi_name_1,gdpg_name_1,ii_name_1,cpi_name_1,hioef_name_1,lr_name_1,Religions_name_1,Languages_name_1,Population_name_1
 id_name_2,Country_name_2,Continent_name_2,fhs_name_2,gov_name_2,Capital_name_2,pnr_name_2,Topography_name_2,Climate_name_2,le_name_2,imr_name_2,pcod_name_2,GDPPC_name_2,cer_name_2,bmi_name_2,gdpg_name_2,ii_name_2,cpi_name_2,hioef_name_2,lr_name_2,Religions_name_2,Languages_name_2,Population_name_2
