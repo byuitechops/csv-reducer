@@ -4,6 +4,30 @@
 const dsv = require('d3-dsv');
 
 /********************************************************************
+ * 
+*********************************************************************/
+const createCSV = function (csvObject, options) {
+    var output = '';
+    options.headersOut.forEach( (header) => {
+        output += (header + ',');
+    });
+    output = output.slice(0,-1); // take the last comma off the column line
+    csvObject.forEach( (row) => {
+        output += '\n';
+        options.headersOut.forEach( (header) => {
+            if (row[header] === undefined){
+                // console.log(row);
+                output += ',';
+            } else {
+                output += row[header] + ',';
+            }
+        });
+        output = output.slice(0,-1); // take out the last comma off the row
+    });
+    return output;
+}
+
+/********************************************************************
  * This will check for and remove the Byte-Order-Mark if it exists
  * in the given CSV document Note: BOM can be referenced by:
  * '\ufeff' in utf8, and shows up as 'ef bb bf' in buffer form
@@ -31,30 +55,60 @@ const parseCSV = function(csvToParse){
  * function and the options specified
 *********************************************************************/
 const csvReducer = function(csvToReduce, options, reducerFunction){
-    // Choose what to do here based on options
     console.log('csvReducer()');
-    return csvToReduce.reduce(reducerFunction, options.initAcc);
+    var initAcc = Object.assign([], options.initAcc); // How to copy an object 
+    var reducedCSV = csvToReduce.reduce(reducerFunction, initAcc);
+    reducedCSV.columns = Object.keys(reducedCSV[0]);
+    return reducedCSV;
 }
 
 /********************************************************************
- * editCSV is kind of messy right now, but it's function may be better
- * seperated into multiple methods
-*********************************************************************/
-const editCSV = function(reducedValue, options){
+ * Edits the current CSV Object and removes any keys that don't match the
+ * headersOut option.
+ *********************************************************************/
+const limitHeaders = function(csvObject, options){
     // Choose what to do here based on options
-    console.log('editCSV()');
-    let editedCSV;
-    reducedValue.acc(value => {
-        Object.keys(value).forEach(key => {
-            options.headersOut.forEach(header => {
-                if (key === header) {
-                    // return something here
+    console.log('limitHeaders()');
+    reducedCSV = csvObject.reduce(function(acc, curr){
+        csvObject.columns.forEach(function(column){
+            var doKeepKey = [];
+            options.headersOut.forEach(function(header) {
+                if (column === header) {
+                    doKeepKey.push(true);
                 }
             });
+            if (doKeepKey.includes(true)){
+                
+            } else {
+                delete curr[column];
+            }
         });
-        // there was no match, so return the unedited acc here.
-    });
-    return '\'Editted CSV Here\'';
+        acc.push(curr);
+        return acc;
+    },[]);
+    console.log(reducedCSV)
+    return reducedCSV;
+}
+
+/********************************************************************
+ * getChangedCSV takes the current 
+*********************************************************************/
+const formatCSV = function(csvObject, options){
+    console.log('formatCSV()');
+    return createCSV(csvObject, options);
+    // return dsv.csvFormat(csvObject);
+}
+
+
+/********************************************************************
+ * 
+ *********************************************************************/
+const optionsChecker = function(options){
+    // Choose what to do here based on options
+    console.log('optionsChecker()');
+    // go through each option and set default values to anything not filled out 
+    // and return an error notifying the user of anything not set to a usable type.
+    return options;
 }
 
 /********************************************************************
@@ -63,21 +117,29 @@ const editCSV = function(reducedValue, options){
 class ModifiedCSV {
     constructor(initialCSV, options, reducerFunction){
         if(initialCSV !== undefined){
-            this.newCSV = this.removeBOM(initialCSV);
-            this.parsedCSV = this.parseCSV(this.newCSV);
-            this.reducedValue = this.csvReducer(this.parsedCSV, options, reducerFunction);
-            this.newCSV = this.editCSV(this.reducedValue, options);
+            this.options = this.optionsChecker(options);
+            this.initialCSV = this.removeBOM(initialCSV); // initial copy of the given csv
+            this.parsedCSV = this.parseCSV(this.initialCSV); // the inital parsed version
+            this.options.initialHeaders = this.parseCSV.columns;
+            this.reducedCSV = this.csvReducer(this.parsedCSV, reducerFunction);
+            this.reducedCSV = this.limitHeaders(this.reducedCSV);
+            this.newCSV = this.formatCSV(this.reducedCSV);
         }
     }
     // methods
+    optionsChecker(options){return optionsChecker(options);}
     removeBOM(stringWithBOM){return removeBOM(stringWithBOM);}
     parseCSV(csvToParse){return parseCSV(csvToParse);}
-    csvReducer(csvToReduce, options, reducerFunction){return csvReducer(csvToReduce, options, reducerFunction);}
-    editCSV(reducedValue, options, reducerFunction){return editCSV(reducedValue, options);} 
-    // consider a limitKeys(parsedCSV){} method to help with editCSV
+    csvReducer(csvToReduce, reducerFunction){return csvReducer(csvToReduce, this.options, reducerFunction);}
+    limitHeaders(parsedCSV){return limitHeaders(parsedCSV, this.options);}
+    formatCSV(csvToFormat){return formatCSV(csvToFormat, this.options);}
+    // setters
+    setOptions(options){return optionsChecker(options);}
+    // setInitialCSV(initialCSV){this.initialCSV = removeBOM(initialCSV);}
+    // setParsedCSV(parsedCSV){this.parsedCSV = parsedCSV}
     // getters
-    getObject(){return this.reducedValue;}
-    getCSV(){return this.newCSV;}
+    getFormattedCSV(){return this.newCSV;}
+    getReducedCSV(){return this.reducedCSV;}
 }
 
 /********************************************************************

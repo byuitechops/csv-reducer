@@ -11,7 +11,10 @@ var csv = fs.readFileSync(target, 'utf8');
 var options = {
     verifyHeaders:['id', 'Country', 'gov', 'Religions'],
     headersOut:['id', 'Country', 'gov', 'Religions'],
-    initAcc: [],
+    initAcc:[],
+    // initAcc:{banana: 'is a fruit'},
+    // initAcc:'strigy-thingy',
+    // initAcc: 100,
 };
 var reducer = function (acc, curr) {
     Object.keys(curr).forEach(key => {
@@ -21,6 +24,10 @@ var reducer = function (acc, curr) {
     return acc;
 }
 csvConverted = csvr(csv, options, reducer);
+// console.log(csvConverted.getFormattedCSV());
+// csvTool = csvr();
+// csvTool.setInitialCSV(csv);
+// csvTool.updateParsedCSV();
 // console.log(csvConverted.getObject());
 /********************************************************************
  *   END: Testing with Real CSV. :END
