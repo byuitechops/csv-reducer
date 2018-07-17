@@ -4,7 +4,8 @@
 const dsv = require('d3-dsv');
 
 /********************************************************************
- * 
+ * Create CSV formats a CSV guarenteeing the order of the elements 
+ * being the same order as the options.headersOut array.
 *********************************************************************/
 const createCSV = function (csvObject, options) {
     var output = '';
@@ -86,12 +87,13 @@ const limitHeaders = function(csvObject, options){
         acc.push(curr);
         return acc;
     },[]);
-    console.log(reducedCSV)
+    // console.log(reducedCSV)
     return reducedCSV;
 }
 
 /********************************************************************
- * getChangedCSV takes the current 
+ * formatCSV() takes the current CSV Object and formats it into a 
+ * CSV String.
 *********************************************************************/
 const formatCSV = function(csvObject, options){
     console.log('formatCSV()');

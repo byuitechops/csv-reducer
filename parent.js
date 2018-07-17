@@ -1,7 +1,7 @@
 
 const fs =  require('fs');
-const target = './csv-tests/countriesDummyData.csv';
-const bomRemoval = './csv-tests/bom.txt';
+const target = './csv-tests/test-inputs/in-house/countriesDummyData.csv';
+const bomRemoval = './csv-tests/test-inputs/in-house/bom.txt';
 const csvr = require('./main.js');
 
 /********************************************************************
@@ -24,7 +24,7 @@ var reducer = function (acc, curr) {
     return acc;
 }
 csvConverted = csvr(csv, options, reducer);
-// console.log(csvConverted.getFormattedCSV());
+console.log(csvConverted.getFormattedCSV());
 // csvTool = csvr();
 // csvTool.setInitialCSV(csv);
 // csvTool.updateParsedCSV();
