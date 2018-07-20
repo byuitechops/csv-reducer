@@ -61,8 +61,7 @@ csvrOptions = {
 reducer = function(acc, curr) {
     //Cycle through all headers. Depending on the header, do this:
     csvrOptions.headersOut.forEach((header) => {
-        
-        if (header === 'questioncando' && updateCanDoField) { // if questioncando field, 
+        if (header === 'questioncando' && updateCanDoField) {  // if questioncando field, 
             if (curr.questioncando === 'f9'){                  // and file is for read or write,
                 console.log("Updating f9 to f10!");
                 curr.questioncando = 'f10'; // f9 to f10
@@ -76,7 +75,13 @@ reducer = function(acc, curr) {
                 console.log("Updating f31 to f30!");
                 curr.questioncando = 'f30'; // f31 to f30
             }
-        }
+        } else if (header === 'questionname') {
+            var pqname = curr.questionname;
+            var qname = pqname.split(/passage\s*\d+\s*/)[1];
+            var pname = pqname.split(/question\s*\d+\s*/)[0];
+            curr.questionname = qname.replace(/\s/g, '');
+            curr.passagename = pname.replace(/\s/g, '');
+        } 
     });
     acc.push(curr);
     return acc;
