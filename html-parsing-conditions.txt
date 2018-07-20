@@ -1,0 +1,87 @@
+/**************************************************************
+ * Project Questions and Comments:
+ * 1. Everywhere on the document 'definition' is spelled 'defanintion'
+ *    I assume that the correct spelling should be used on things such
+ *    as class tags, etc. Is this correct?
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+***************************************************************/
+
+/**************************************************************
+ * Green Box: Adding Class Definitions and Examples
+***************************************************************/
+if somewhere after `<h2>Warm-up</h2>` 
+there is `<p><strong>`
+    Then...
+edit `<p>` to  = `<p class="vocab definition">` // `class = "vocab definition"` or `class = "vocab-definition"` ?
+    Unless...
+The word "example" is present before the `</p>`
+    Or...
+There is an `<em>` between `<p>` and `</p>`
+    But...
+If there is an `<em>` between `<p>` and `</p>`
+    Then...
+edit `<p>` to = `<p class="vocab example">`
+/**************************************************************
+ * Footer Notes: 
+ * It seems that all "example" <p><strong> combinations have the 
+ * <em> tags, and vice-versa.
+***************************************************************/
+
+/**************************************************************
+ * Green Box: Passage Content to Delete
+***************************************************************/
+Delete:
+    Everything between
+        `<h1>Instructions</h1>`
+    and
+        `<h2>Warm-up</h2>`
+    including `<h1>Instructions</h1>`
+Also Delete:
+    Everything between
+        `<h2>Warm-up</h2>`
+    and
+        the first `<p><strong>` combination
+    including `<h2>Warm-up</h2>`
+But...
+    Stop if `<h2>Passage</h2>` is found.
+/**************************************************************
+ * Footer Notes: 
+ * Each of the following tags seems to follow these capitalization 
+ * and spaces ruling, but I wouldn't count on it reliably:
+ *      <h1>Instructions</h1>
+ *      <h2>Warm-up</h2>
+ *      <h2>Passage</h2>
+***************************************************************/
+
+/**************************************************************
+ * Green Box: Add Divs
+***************************************************************/
+Add
+    `<div class="definitions-container"> ... </div>` where '...' 
+    is the definitions section of the HTML contained in the csv.
+    --> See footer notes for details.
+Add
+    `<div class="passage-container"> ... </div>` where '...'
+    is the definitions section of the HTML contained in the csv.
+    --> See footer notes for details.
+/**************************************************************
+ * Footer Notes: 
+ * 1. None of the four testing documents we've been given contain 
+ *    an `<h2>Definitiins</h2>` tag. 
+ * 2. Are we gaurenteed to reach an `<h2>Passage</h2>` container to
+ *    mark the end of the area that should be enclosed by the 
+ *    `<div class="definitions-container"> ... </div>`?
+ *    --> I'm assuming not. But if not, then some pattern needs to
+ *        be identified to know where the 'definitions-container'
+ *        should end.
+ * 3. Are we gaurenteed to reach the end of the html snippit in
+ *    the given csv to mark the spot to close the 
+ *    `<div class="passage-container">` ?
+***************************************************************/
