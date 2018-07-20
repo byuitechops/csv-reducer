@@ -30,8 +30,8 @@ If there is an `<em>` between `<p>` and `</p>`
 edit `<p>` to = `<p class="vocab example">`
 /**************************************************************
  * Footer Notes: 
- * It seems that all "example" <p><strong> combinations have the 
- * <em> tags, and vice-versa.
+ * 1. It seems that all "example" <p><strong> combinations have the 
+ *    <em> tags, and vice-versa.
 ***************************************************************/
 
 /**************************************************************
@@ -53,11 +53,12 @@ But...
     Stop if `<h2>Passage</h2>` is found.
 /**************************************************************
  * Footer Notes: 
- * Each of the following tags seems to follow these capitalization 
- * and spaces ruling, but I wouldn't count on it reliably:
+ * 1. Each of the following tags seems to follow these capitalization 
+ *    and spaces ruling, but I wouldn't count on it reliably:
  *      <h1>Instructions</h1>
  *      <h2>Warm-up</h2>
  *      <h2>Passage</h2>
+ * 2. This content is contained in the "passagetext" header.
 ***************************************************************/
 
 /**************************************************************

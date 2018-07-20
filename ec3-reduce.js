@@ -87,6 +87,8 @@ reducer = function(acc, curr) {
         } else if (header === 'questionaudiofilename') {
             curr.questionaudiotranscript = curr.questionaudiofilename;
             delete curr.questionaudiofilename;
+        } else if (header === 'passagetext') {
+            
         }
     });
     acc.push(curr);
