@@ -81,7 +81,13 @@ reducer = function(acc, curr) {
             var pname = pqname.split(/question\s*\d+\s*/)[0];
             curr.questionname = qname.replace(/\s/g, '');
             curr.passagename = pname.replace(/\s/g, '');
-        } 
+        } else if (header === 'passageaudiofilename') {
+            curr.passageaudiotranscript = curr.passageaudiofilename;
+            delete curr.passageaudiofilename;
+        } else if (header === 'questionaudiofilename') {
+            curr.questionaudiotranscript = curr.questionaudiofilename;
+            delete curr.questionaudiofilename;
+        }
     });
     acc.push(curr);
     return acc;
@@ -91,7 +97,7 @@ reducer = function(acc, curr) {
 var newcsv = csvr(csv, csvrOptions, reducer);
 var csvOutput = newcsv.getFormattedCSV();
 
-// console.log(JSON.stringify(newcsv.getReducedCSV(), null, 4));
+console.log(JSON.stringify(newcsv.getReducedCSV(), null, 4));
 
 // Output File
 var outputLocation = outputDirectory + Date.now() + '_' + outputName;
