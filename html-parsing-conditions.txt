@@ -59,6 +59,8 @@ But...
  *      <h2>Warm-up</h2>
  *      <h2>Passage</h2>
  * 2. This content is contained in the "passagetext" header.
+ * 3. /<h1>Instructions<\/h1>[\S\s]*?(<h2>Warm-up<\/h2>|<h2>Passage<\/h2>)/i
+ *    above is the regex line for removing everything between <h1> and <h2>
 ***************************************************************/
 
 /**************************************************************
