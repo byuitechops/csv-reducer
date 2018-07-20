@@ -3,6 +3,10 @@
 *********************************************************************/
 const fs =  require('fs');
 const csvr = require('./main.js');
+var fileNumber = parseInt(process.argv[2], 10);
+if (process.argv[2] === undefined){
+    fileNumber = 0;
+}
 
 /********************************************************************
  * Test Files
@@ -21,17 +25,24 @@ const targetFiles = [
     'FP_W1_NE_T5_POC4_V1_CSS.csv'
 ];
 
+var updateCanDoField = false;
+if ( targetFiles[fileNumber].includes('R') || targetFiles[fileNumber].includes('W') ) {
+    updateCanDoField = true;
+    console.log('This File Needs to have the can-do field updated.');
+}
+
 /********************************************************************
  * ec3 Outputs
  *********************************************************************/
-var outputLocation = './csv-tests/ec3/ec3-outputs/';
+// Selecting Main File
+var targetFile = targetFiles[fileNumber];
+// Setting Output File Locationss
+var outputDirectory = './csv-tests/ec3/ec3-outputs/';
 var outputName = targetFile;
 
 /********************************************************************
  * Start Main Function
  *********************************************************************/
-//Selecting Main File
-var targetFile = targetFiles[0];
 // Read Main File
 var csv = fs.readFileSync(targetDirectory + targetFile, 'utf8');
 
@@ -47,7 +58,26 @@ csvrOptions = {
 };
 
 // Main Reducer Function
-reducer = function(acc, curr){
+reducer = function(acc, curr) {
+    //Cycle through all headers. Depending on the header, do this:
+    csvrOptions.headersOut.forEach((header) => {
+        
+        if (header === 'questioncando' && updateCanDoField) { // if questioncando field, 
+            if (curr.questioncando === 'f9'){                  // and file is for read or write,
+                console.log("Updating f9 to f10!");
+                curr.questioncando = 'f10'; // f9 to f10
+            } else if (curr.questioncando === 'f10'){
+                console.log("Updating f10 to f11!");
+                curr.questioncando = 'f11'; // f10 to f11
+            } else if (curr.questioncando === 'f11'){
+                console.log("Updating f11 to f9!");
+                curr.questioncando = 'f9'; // f11 to f9
+            } else if (curr.questioncando === 'f31'){
+                console.log("Updating f31 to f30!");
+                curr.questioncando = 'f30'; // f31 to f30
+            }
+        }
+    });
     acc.push(curr);
     return acc;
 };
@@ -56,13 +86,15 @@ reducer = function(acc, curr){
 var newcsv = csvr(csv, csvrOptions, reducer);
 var csvOutput = newcsv.getFormattedCSV();
 
+// console.log(JSON.stringify(newcsv.getReducedCSV(), null, 4));
 
 // Output File
-fs.writeFile(outputLocation + outputName, csvOutput, function(err){
+var outputLocation = outputDirectory + Date.now() + '_' + outputName;
+fs.writeFile(outputLocation, csvOutput, function(err){
     if (err) {
         console.error(err);
     } else {
-        console.log('Output file to: ' + outputLocation + outputName);
+        console.log('Output file to: ' + outputLocation);
     }
 });
 

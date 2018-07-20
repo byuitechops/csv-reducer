@@ -4,31 +4,6 @@
 const dsv = require('d3-dsv');
 
 /********************************************************************
- * Create CSV formats a CSV guarenteeing the order of the elements 
- * being the same order as the options.headersOut array.
-*********************************************************************/
-const createCSV = function (csvObject, options) {
-    var output = '';
-    options.headersOut.forEach( (header) => {
-        output += (header + ',');
-    });
-    output = output.slice(0,-1); // take the last comma off the column line
-    csvObject.forEach( (row) => {
-        output += '\n';
-        options.headersOut.forEach( (header) => {
-            if (row[header] === undefined){
-                // console.log(row);
-                output += ',';
-            } else {
-                output += row[header] + ',';
-            }
-        });
-        output = output.slice(0,-1); // take out the last comma off the row
-    });
-    return output;
-}
-
-/********************************************************************
  * This will check for and remove the Byte-Order-Mark if it exists
  * in the given CSV document Note: BOM can be referenced by:
  * '\ufeff' in utf8, and shows up as 'ef bb bf' in buffer form
@@ -76,6 +51,8 @@ const limitHeaders = function(csvObject, options){
             options.headersOut.forEach(function(header) {
                 if (column === header) {
                     doKeepKey.push(true);
+                } else {
+
                 }
             });
             if (doKeepKey.includes(true)){
@@ -97,8 +74,7 @@ const limitHeaders = function(csvObject, options){
 *********************************************************************/
 const formatCSV = function(csvObject, options){
     console.log('formatCSV()');
-    return createCSV(csvObject, options);
-    // return dsv.csvFormat(csvObject);
+    return dsv.csvFormat(csvObject, options.headersOut);
 }
 
 
@@ -118,7 +94,7 @@ const optionsChecker = function(options){
 *********************************************************************/
 class ModifiedCSV {
     constructor(initialCSV, options, reducerFunction){
-        if(initialCSV !== undefined){
+        if (initialCSV !== undefined) {
             this.options = this.optionsChecker(options);
             this.initialCSV = this.removeBOM(initialCSV); // initial copy of the given csv
             this.parsedCSV = this.parseCSV(this.initialCSV); // the inital parsed version
