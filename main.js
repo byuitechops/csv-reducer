@@ -33,6 +33,7 @@ const parseCSV = function (csvToParse) {
 const csvReducer = function (csvToReduce, options, reducerFunction) {
     console.log('csvReducer()');
     var initAcc = Object.assign([], options.initAcc); // How to copy an object 
+    initAcc.options = options;
     var reducedCSV = csvToReduce.reduce(reducerFunction, initAcc);
     reducedCSV.columns = Object.keys(reducedCSV[0]);
     return reducedCSV;

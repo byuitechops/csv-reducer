@@ -18,7 +18,7 @@
 ***************************************************************/
 if somewhere after `<h2>Warm-up</h2>` 
 there is `<p><strong>`
-    Then...
+    Then For Every Occurrance...
 edit `<p>` to  = `<p class="vocab definition">` // `class = "vocab definition"` or `class = "vocab-definition"` ?
     Unless...
 The word "example" is present before the `</p>`
@@ -59,19 +59,23 @@ But...
  *      <h2>Warm-up</h2>
  *      <h2>Passage</h2>
  * 2. This content is contained in the "passagetext" header.
- * 3. /<h1>Instructions<\/h1>[\S\s]*?(<h2>Warm-up<\/h2>|<h2>Passage<\/h2>)/i
+ * 3. /<h1>Instructions<\/h1>[\S\s]*?(<h2>Warm-up<\/h2>)/i
  *    above is the regex line for removing everything between <h1> and <h2>
+ * 4. /<h2>Warm-up<\/h2>[\S\s]*?(<p><strong>|<h2>Passage<\/h2>)/i
+ *    ^^ Regex for part 2
+ * >> NOTE: is the first <p><strong> combot the real first place we want to stop?
+ *          it looks like it holds some content that may be wanted later.
 ***************************************************************/
 
 /**************************************************************
  * Green Box: Add Divs
 ***************************************************************/
 Add
-    `<div class="definitions-container"> ... </div>` where '...' 
+    `<div class="definitions-container"> ... </div>`, where '...' 
     is the definitions section of the HTML contained in the csv.
     --> See footer notes for details.
 Add
-    `<div class="passage-container"> ... </div>` where '...'
+    `<div class="passage-container"> ... </div>`, where '...'
     is the definitions section of the HTML contained in the csv.
     --> See footer notes for details.
 /**************************************************************
@@ -88,3 +92,15 @@ Add
  *    the given csv to mark the spot to close the 
  *    `<div class="passage-container">` ?
 ***************************************************************/
+
+Points to Hit on:
+1. Will all "example" <p><strong> combinations have the <em> tags?
+// 2a. Should `class = "vocab definition"` or `class = "vocab-definition"` ?
+// 2b. should `class = "vocab example"` or `class = "vocab-example"` ?
+3. Do you want the <h1>Instructions</h1> and <h2>Warm-up</h2> elements 
+   deleted, or just the content between them?
+   --> Should the <p> tags between <h2>Warm-up</h2> and <p><strong> be deleted?
+4. How to know where to start and stop the added div containers? i.e. 
+   definitions-container and passage-container.
+   --> None of the example CSVs have an <h2>Definitions</h2> tag.
+   --> 
