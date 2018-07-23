@@ -88,44 +88,8 @@ var reducer = function (acc, curr) {
             curr.questionaudiotranscript = curr.questionaudiofilename; // change value to new header name
             delete curr.questionaudiofilename;
         } else if (header === 'passagetext') { // if passagetext field,
-            curr.passagetext.replace(/<h1>Instructions<\/h1>[\S\s]*?(<h2>Warm-up<\/h2>|<h2>Passage<\/h2>)/i, '')
-            // // instructions
-            // var instructionsLocaiton = curr.passagetext.indexOf('<h1>Instructions</h1>');
-            // var instructionsFound = instructionsLocaiton !== -1; // was the instructions header found?
-            // // warmup
-            // var warmUpLocation = curr.passagetext.indexOf('<h2>Warm-up</h2>');
-            // var warmUpFound = warmUpLocation !== -1; // was the warm up location found?
-            // // passage
-            // var passageLocation = curr.passagetext.indexOf('<h2>Passage</h2>');
-            // var passageFound = passageLocation !== -1; // was the passage location found?
-            // // determine start Location
-            // var startDelete;
-            // var endDelete;
-            // if (instructionsFound) {
-            //     startDelete = instructionsLocaiton;
-            //     if (warmUpFound && passageFound) {
-            //         if (warmUpLocation < passageLocation) {
-            //             endDelete = warmUpLocation;
-            //             console.log('choosing warmup');
-            //         } else {
-            //             endDelete = passageLocation;
-            //             console.log('choosing passage');
-            //         }
-            //     } else if (warmUpFound && !passageFound) {
-            //         console.log('choosing warmup');
-            //         endDelete = warmUpLocation;
-            //     } else if (passageFound && !warmUpFound) {
-            //         endDelete = passageLocation;
-            //         console.log('choosing passage');
-            //     } else {
-            //         throw 'In remove passage content, an unhandeled error occurred.';
-            //     }
-            // } else {
-            //     console.error('The \'<h1>Instructions</h1>\' header wasn\'t found.');
-            //     console.error('Skipping Element: ' + acc.length());
-            // }
-            // console.log(startDelete);
-            // console.log(endDelete);
+            curr.passagetext = curr.passagetext.replace(/<h1>Instructions<\/h1>[\S\s]*?(<h2>Warm-up<\/h2>)/i, /$1/);
+            curr.passagetext = curr.passagetext.replace(/<h2>Warm-up<\/h2>[\S\s]*?(<p><strong>|<h2>Passage<\/h2>)/i, '$1');
         } else if (header === true) {
             console.log();
         }
