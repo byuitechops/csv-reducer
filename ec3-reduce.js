@@ -83,16 +83,14 @@ var updateQuestionCanDo = function (acc, curr) {
             curr.questioncando = 'f30'; // f31 to f30
         }
     }
-    return curr;
 };
 
 /********************************************************************
- *  TODO Redesign the split to use cheerio instead of regex.
+ *  splitQuestionName into questionname and passagename
  *********************************************************************/
 var splitQuestionName = function (acc, curr) {
     var pqname = curr.questionname.replace(/\s/g, ''); //remove all spaces
     pqname.match(/passage\s*?(\d+)\s*question\s*?(\d+)/g);
-    // console.log(pqname);
     curr.questionname = pqname.split(/passage\d+/)[1];
     curr.passagename = pqname.split(/question\d+/)[0];
 };
@@ -116,8 +114,8 @@ var editPassageText = function (acc, curr) {
     if (counter < 1) {
         counter++;
         console.log('HEY IM ABOUT TO LOG A CHEERIO OBJECT!');
-        console.dir($('h1')[0].name);
-    }
+        console.log($('h2').nextUntil('h2').html() /*.filter('p').text()*/ );
+    } // ^^ Practice more with cheerio until I can find what Im looking for.
     // "Passage Content to Delete" Section
     // curr.passagetext = curr.passagetext.replace(/<h1>Instructions<\/h1>[\S\s]*?(<h2>Warm-up<\/h2>)/i, /$1/);
     // curr.passagetext = curr.passagetext.replace(/<h2>Warm-up<\/h2>[\S\s]*?(<p><strong>|<h2>Passage<\/h2>)/i, /'$1'/);
