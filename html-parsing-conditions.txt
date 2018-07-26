@@ -104,3 +104,16 @@ Points to Hit on:
    definitions-container and passage-container.
    --> None of the example CSVs have an <h2>Definitions</h2> tag.
    --> 
+
+
+
+UNUSED CODE THAT MAY WANT TO BE REFERRED TO LATER::
+// curr.passagetext = curr.passagetext.replace(/<h1>Instructions<\/h1>[\S\s]*?(<h2>[\s\S]*?Warm-up[\s\S]*?<\/h2>)/i, '<h2>Definitions</h2><h2>Warm-up</h2>');
+// curr.passagetext = curr.passagetext.replace(/<h2>Warm-up<\/h2>[\S\s]*?(<p><strong>|<h2>Passage<\/h2>)/i, /$1/);
+
+// if (curr.passagetext.includes('<html>')){curr.passagetext = curr.passagetext.replace(/<html>/g, '');}
+// if (curr.passagetext.includes('</html>')){curr.passagetext = curr.passagetext.replace(/<\/html>/g, '');}
+// if (curr.passagetext.includes('<head>')){curr.passagetext = curr.passagetext.replace(/<head>/g, '');}
+// if (curr.passagetext.includes('</head>')){curr.passagetext = curr.passagetext.replace(/<\/head>/g, '');}
+// if (curr.passagetext.includes('<body>')){curr.passagetext = curr.passagetext.replace(/<body>/g, '');}
+// if (curr.passagetext.includes('</body>')){curr.passagetext = curr.passagetext.replace(/<\/body>/g, '');}

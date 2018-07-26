@@ -13,7 +13,7 @@ var counter = 0;
 var shouldUpdateCando = function (filename) {
     var lowerFilename = filename.toLowerCase();
     if (lowerFilename[3] === 'r' || lowerFilename[3] === 'w') {
-        console.log(filename + ' needs to have cando updated.');
+        // console.log(filename + ' needs to have cando updated.');
         return true;
     } else {
         return false;
@@ -46,8 +46,8 @@ var updateQuestionCanDo = function (acc, curr) {
  *********************************************************************/
 var splitQuestionName = function (acc, curr) {
     var pqname = curr.questionname.replace(/\s/g, ''); //remove all spaces
-    curr.questionname = pqname.replace(/passage\d+/, '');
-    curr.passagename = pqname.replace(/question\d+/, '');
+    curr.questionname = pqname.replace(/passage\d+/i, '');
+    curr.passagename = pqname.replace(/question\d+/i, '');
 };
 
 /********************************************************************
@@ -61,19 +61,40 @@ var deleteKeys = function (acc, curr) {
 };
 
 /********************************************************************
- * Edit passagetext
+ * Edit passagetext: removeText
+ * 
+ * USE:     in reduce function. Needs accumulator, current item, and
+ *          cheerio object
+ * RETURNS: void
  *********************************************************************/
-var editPassageText = function (acc, curr) {
-    var $ = cheerio.load(curr.passagetext);
-    // "Passage Content to Delete" Section
-    // curr.passagetext = curr.passagetext.replace(/<h1>Instructions<\/h1>[\S\s]*?(<h2>[\s\S]*?Warm-up[\s\S]*?<\/h2>)/i, '<h2>Definitions</h2><h2>Warm-up</h2>');
-    // curr.passagetext = curr.passagetext.replace(/<h2>Warm-up<\/h2>[\S\s]*?(<p><strong>|<h2>Passage<\/h2>)/i, /$1/);
-    var toDelete = $('h1').first().nextUntil('h2');
-    if (counter < 1) {
-        counter++;
-        console.dir(toDelete.length);
+var replaceText = function (acc, curr, $) {
+    if ($('h1').first().text().toLowerCase() === 'instructions') {
+        if ($('h2').first().text().toLowerCase() === 'warm-up') {
+            // Remove everything between h1 instructions and h2 warm-up
+            $('h1').first().nextUntil('h2').remove('*');
+        }
+        // Remove instructions h1 tag
+        $('h1').first().remove('*');
     }
-    // "Adding Class Definitions and Examples"
+    if ($('h2').first().text().toLowerCase() === 'warm-up'){
+        // replaced warm-up with definitions
+        $('h2').first().after('<h2>Definitions</h2>'); // add definitions h2 tag after warm-up h2 tag
+        $('h2').first().remove(); // remove warm-up h2 tag
+        if ($('h2').first().text().toLowerCase() === 'definitions') {
+            // console.log($('h2').first().nextUntil('h2').not($('p').has('strong')).length);
+            $('h2').first().nextUntil('h2').not($('p').has('strong')).remove();
+        }
+    }
+};
+
+/********************************************************************
+ * Edit passagetext: addClassDefinitions
+ *
+ * USE:     in reduce function. Needs accumulator, current item, and
+ *          cheerio object
+ * RETURNS: void
+ *********************************************************************/
+var addClassDefinitions = function (acc, curr, $) {
     // Gets all the <p><strong> combinations between the first h2 tag and the next one.
     var pstrong = $('h2').first().nextUntil('h2').filter('p').has('strong');
     var pem = $('h2').first().nextUntil('h2').filter('p').has('em');
@@ -81,7 +102,63 @@ var editPassageText = function (acc, curr) {
     pem.removeClass('vocab-definition');
     pem.addClass('vocab-example');
     curr.passagetext = $.html();
-    // "Add Divs" Section
+};
+
+/********************************************************************
+ * Edit passagetext: addDivsAround
+ *
+ * USE:     in reduce function. Needs accumulator, current item, and
+ *          cheerio object
+ * RETURNS: void
+ *********************************************************************/
+var addDivsAround = function (acc, curr, $) {
+    if ($('h2').first().text().toLowerCase() === 'definitions') {
+        $('h2').first().nextUntil('h2').add($('h2').first()).first().before($('<div class="definitions-container">'));
+        $('h2').first().nextUntil('h2').add($('h2').first()).last().after($('<div class="addclosingdiv">heylookherethisisasentancethatwillhopefullyneverappearinanyfilefromheretotherestofforeverinanyec3courseyay</div>'));
+        // $('.addclosingdiv').replaceWith('div');
+        // $('h2').first().nextUntil('h2').add($('h2').first()).wrap($('<div class="definitions-container"></div>'));
+    }
+    if ($('h2').last().text().toLowerCase() === 'passage'){
+        $('h2').last().nextAll().add($('h2').last()).first().before($('<div class="passage-container">'));
+        $('h2').last().nextAll().add($('h2').last()).last().after($('<div class="addclosingdiv">heylookherethisisasentancethatwillhopefullyneverappearinanyfilefromheretotherestofforeverinanyec3courseyay</div>'));
+        // $('.addclosingdiv').replaceWith('div');
+        // $('h2').last().nextAll().add($('h2').last()).wrap($('<div class="passage-container"></div>'));
+    }
+};
+
+/********************************************************************
+ * Edit passagetext: Fix Cheerio
+ * DESCRIPTION: Cheerio thinks its so smart and needs to add stuff we
+ *              don't want in both html and xml mode. This function
+ *              fixes those problems by editing the string directly
+ *              and putting stuff where it belongs.
+ * USE: in reduce function.Needs accumulator, current item, and
+ *      cheerio object 
+ * RETURNS: void
+ *********************************************************************/
+var fixCheerio = function (acc, curr) {
+    if (curr.passagetext.includes('<div class="addclosingdiv">heylookherethisisasentancethatwillhopefullyneverappearinanyfilefromheretotherestofforeverinanyec3courseyay</div>')) {
+        curr.passagetext = curr.passagetext.replace(/<div class="addclosingdiv">heylookherethisisasentancethatwillhopefullyneverappearinanyfilefromheretotherestofforeverinanyec3courseyay<\/div>/g, '</div>');
+    }
+    if (curr.passagetext.includes('</link>')){curr.passagetext = curr.passagetext.replace(/<\/link>/g, '');}
+    // if (curr.passagetext.includes('<html>')){curr.passagetext = curr.passagetext.replace(/<html>/g, '');}
+    // if (curr.passagetext.includes('</html>')){curr.passagetext = curr.passagetext.replace(/<\/html>/g, '');}
+    // if (curr.passagetext.includes('<head>')){curr.passagetext = curr.passagetext.replace(/<head>/g, '');}
+    // if (curr.passagetext.includes('</head>')){curr.passagetext = curr.passagetext.replace(/<\/head>/g, '');}
+    // if (curr.passagetext.includes('<body>')){curr.passagetext = curr.passagetext.replace(/<body>/g, '');}
+    // if (curr.passagetext.includes('</body>')){curr.passagetext = curr.passagetext.replace(/<\/body>/g, '');}
+};
+
+/********************************************************************
+ * Edit passagetext
+ *********************************************************************/
+var editPassageText = function (acc, curr) {
+    var $ = cheerio.load(curr.passagetext, {xmlMode: true}); // Declare Cheerio Object
+    replaceText(acc, curr, $); // "Passage Content to Delete" Section
+    addClassDefinitions(acc, curr, $); // "Adding Class Definitions"
+    addDivsAround(acc, curr, $); // "Add Divs" Section
+    curr.passagetext = $.html();
+    fixCheerio(acc, curr);
 };
 
 /********************************************************************
