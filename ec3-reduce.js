@@ -13,7 +13,7 @@ var counter = 0;
 var shouldUpdateCando = function (filename) {
     var lowerFilename = filename.toLowerCase();
     if (lowerFilename[3] === 'r' || lowerFilename[3] === 'w') {
-        console.log(filename + 'needs to have cando updated.');
+        console.log(filename + ' needs to have cando updated.');
         return true;
     } else {
         return false;
@@ -64,11 +64,16 @@ var deleteKeys = function (acc, curr) {
  * Edit passagetext
  *********************************************************************/
 var editPassageText = function (acc, curr) {
-    // "Passage Content to Delete" Section
-    curr.passagetext = curr.passagetext.replace(/<h1>Instructions<\/h1>[\S\s]*?(<h2>[\s\S]*?Warm-up[\s\S]*?<\/h2>)/i, '<h2>Definitions</h2><h2>Warm-up</h2>');
-    curr.passagetext = curr.passagetext.replace(/<h2>Warm-up<\/h2>[\S\s]*?(<p><strong>|<h2>Passage<\/h2>)/i, /$1/);
-    // "Adding Class Definitions and Examples"
     var $ = cheerio.load(curr.passagetext);
+    // "Passage Content to Delete" Section
+    // curr.passagetext = curr.passagetext.replace(/<h1>Instructions<\/h1>[\S\s]*?(<h2>[\s\S]*?Warm-up[\s\S]*?<\/h2>)/i, '<h2>Definitions</h2><h2>Warm-up</h2>');
+    // curr.passagetext = curr.passagetext.replace(/<h2>Warm-up<\/h2>[\S\s]*?(<p><strong>|<h2>Passage<\/h2>)/i, /$1/);
+    var toDelete = $('h1').first().nextUntil('h2');
+    if (counter < 1) {
+        counter++;
+        console.dir(toDelete.length);
+    }
+    // "Adding Class Definitions and Examples"
     // Gets all the <p><strong> combinations between the first h2 tag and the next one.
     var pstrong = $('h2').first().nextUntil('h2').filter('p').has('strong');
     var pem = $('h2').first().nextUntil('h2').filter('p').has('em');
@@ -142,8 +147,6 @@ function main() {
     asynclib.each(targetFiles, readEditWrite, function (err) {
         if (err) console.error(err);
     });
-
-
 }
 
 main();
