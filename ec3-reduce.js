@@ -64,14 +64,18 @@ var deleteKeys = function (acc, curr) {
  * Edit passagetext
  *********************************************************************/
 var editPassageText = function (acc, curr) {
+    // "Passage Content to Delete" Section
+    curr.passagetext = curr.passagetext.replace(/<h1>Instructions<\/h1>[\S\s]*?(<h2>[\s\S]*?Warm-up[\s\S]*?<\/h2>)/i, '<h2>Definitions</h2><h2>Warm-up</h2>');
+    curr.passagetext = curr.passagetext.replace(/<h2>Warm-up<\/h2>[\S\s]*?(<p><strong>|<h2>Passage<\/h2>)/i, /$1/);
     // "Adding Class Definitions and Examples"
     var $ = cheerio.load(curr.passagetext);
-    if (counter < 1) {
-        counter++;
-        // console.log('HEY IM ABOUT TO LOG A CHEERIO OBJECT!');
-        // console.log($('h2').nextUntil('h2').filter('p').text());
-    } // ^^ Practice more with cheerio until I can find what Im looking for.
-    // "Passage Content to Delete" Section
+    // Gets all the <p><strong> combinations between the first h2 tag and the next one.
+    var pstrong = $('h2').first().nextUntil('h2').filter('p').has('strong');
+    var pem = $('h2').first().nextUntil('h2').filter('p').has('em');
+    pstrong.addClass('vocab-definition');
+    pem.removeClass('vocab-definition');
+    pem.addClass('vocab-example');
+    curr.passagetext = $.html();
     // "Add Divs" Section
 };
 
