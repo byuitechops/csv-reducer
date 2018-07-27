@@ -235,11 +235,12 @@ var reducer = function (acc, curr, i) {
  * appendErrorLog
  *********************************************************************/
 var appendErrorLog = function (reducedCSV) {
+    // TODO -- Finish appendErrorLog Function. Determine how to output file. (probably in callback function)
     reducedCSV.forEach(row => {
         if (!row.everyTaskSuccessful){
             errorDocument += row.thisFileNameIs + ':\n\t';
             Object.keys(row.completedStatus).forEach(function (task) {
-                if (row.completedStatus[task] === false){
+                if (row.completedStatus[task].status === false){
                     console.log('Test');
                 }
             });
@@ -295,6 +296,7 @@ function main() {
         var reducedCSV = outputtedCSV.getReducedCSV();
         var csvOutput = outputtedCSV.getFormattedCSV(); // get reduced, formatted csv
         appendErrorLog(reducedCSV);
+        // TODO Create an output directory for files that pass all tests and files that don't pass all tests.
         writeFile(outputDirectory, file, csvOutput);
         callback(null);
     };
