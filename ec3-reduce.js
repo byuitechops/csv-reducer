@@ -40,12 +40,12 @@ var updateQuestionCanDo = function (acc, curr) {
             console.log('Updating f31 to f30!');
             curr.questioncando = 'f30'; // f31 to f30
         }
-        curr.completedStatus.canDo.status = true;
+        curr.completedStatus.updateCanDo.status = true;
     } else if (curr.questioncando === undefined) {
-        curr.completedStatus.canDo.status = false;
-        curr.completedStatus.canDo.message = 'questioncando field is undefined on this file!';
+        curr.completedStatus.updateCanDo.status = false;
+        curr.completedStatus.updateCanDo.message = 'questioncando field is undefined on this file!';
     } else if (acc.options.updateCanDoField === false) {
-        delete curr.completedStatus.canDo;
+        delete curr.completedStatus.updateCanDo;
     }
 };
 
@@ -53,21 +53,41 @@ var updateQuestionCanDo = function (acc, curr) {
  *  splitQuestionName into questionname and passagename
  *********************************************************************/
 var splitQuestionName = function (acc, curr) {
-    var pqname = curr.questionname.replace(/\s/g, ''); //remove all spaces
-    curr.questionname = pqname.replace(/passage\d+/i, '');
-    curr.passagename = pqname.replace(/question\d+/i, '');
-    curr.completedStatus.splitField.status = true;
+    if (curr.questionname !== undefined){
+        var pqname = curr.questionname.replace(/\s/g, ''); //remove all spaces
+        curr.questionname = pqname.replace(/passage\d+/i, '');
+        curr.passagename = pqname.replace(/question\d+/i, '');
+        curr.completedStatus.splitField.status = true;
+    } else {
+        curr.completedStatus.splitField.status = false;
+        curr.completedStatus.splitField.message = 'questionname field does not exist on this file!';
+    }
 };
 
 /********************************************************************
  * Renames then deletes some keys on the json.
  *********************************************************************/
 var deleteKeys = function (acc, curr) {
-    curr.passageaudiotranscript = curr.passageaudiofilename;
-    curr.questionaudiotranscript = curr.questionaudiofilename;
-    delete curr.passageaudiofilename;
-    delete curr.questionaudiofilename;
-    curr.completedStatus.keyRename.status = true;
+    if (curr.passageaudiofilename !== undefined && curr.questionaudiofilename !== undefined) {
+        curr.passageaudiotranscript = curr.passageaudiofilename;
+        curr.questionaudiotranscript = curr.questionaudiofilename;
+        delete curr.passageaudiofilename;
+        delete curr.questionaudiofilename;
+        curr.completedStatus.keyRename.status = true;
+    } else {
+        curr.passageaudiotranscript = curr.passageaudiofilename;
+        curr.questionaudiotranscript = curr.questionaudiofilename;
+        curr.completedStatus.keyRename.status = false;
+        let errorMessage = '';
+        if (curr.passageaudiofilename === undefined && curr.questionaudiofilename !== undefined) {
+            errorMessage = 'passageaudiofilename field is undefined on this file!...Adding blank definition...';
+        } else if (curr.passageaudiofilename !== undefined && curr.questionaudiofilename === undefined) {
+            errorMessage = 'questionaudiofilename field is undefined on this file!...Adding blank definition...';
+        } else if (curr.passageaudiofilename === undefined && curr.questionaudiofilename === undefined) {
+            errorMessage = 'Both passageaudiofilename and questionaudiofilename field are undefined on this file!...Attempting to add keys anyway...';
+        }
+        curr.completedStatus.keyRename.message = errorMessage;
+    }
 };
 
 /********************************************************************
@@ -154,7 +174,7 @@ var fixCheerio = function (acc, curr) {
         curr.completedStatus.fixCheerioAddCloseDiv.status = true;
     } else {
         curr.completedStatus.fixCheerioAddCloseDiv.status = false;
-        curr.completedStatus.fixCheerioAddCloseDiv.message = 'THIS IS IMPORTANT!!!\nThe Following HTML elements likely won\'t have closing <div> tags:\n<div class="definitions-container">\n<div class="passage-container">';
+        curr.completedStatus.fixCheerioAddCloseDiv.message = 'THIS IS IMPORTANT!!! --> "<div class="definitions-container">" AND "<div class="passage-container">" HAVE NO "</div>" !!!';
     }
     if (curr.passagetext.includes('</link>')){
         curr.passagetext = curr.passagetext.replace(/<\/link>/g, '');
@@ -184,39 +204,39 @@ var reducer = function (acc, curr, i) {
     curr.completedStatus = {
         splitField: {
             status: false,
-            message: ''
+            message: 'Default Message'
         },
         keyRename: {
             status: false,
-            message: ''
+            message: 'Default Message'
         },
         passageDelete: {
             status: false,
-            message: ''
+            message: 'Default Message'
         },
         passageClass: {
             status: false,
-            message: ''
+            message: 'Default Message'
         },
         passageDivDefinition: {
             status: false,
-            message: ''
+            message: 'Default Message'
         },
         passageDivPassage: {
             status: false,
-            message: ''
+            message: 'Default Message'
         },
         fixCheerioAddCloseDiv: {
             status: false,
-            message: ''
+            message: 'Default Message'
         },
         fixCheerioRemoveCloseLink: {
             status: false,
-            message: ''
+            message: 'Default Message'
         },
-        canDo: {
+        updateCanDo: {
             status: false,
-            message: ''
+            message: 'Default Message'
         }
     };
     updateQuestionCanDo(acc, curr);
@@ -226,26 +246,53 @@ var reducer = function (acc, curr, i) {
     curr.everyTaskSuccessful = Object.keys(curr.completedStatus).every(function(task){
         return curr.completedStatus[task].status;
     });
-    curr.thisFileNameIs = acc.currentFile;
+    // curr.thisFileNameIs = acc.options.currentFile;
     acc.push(curr);
     return acc;
+};
+
+
+/********************************************************************
+ * used as a determinator for which directory the output files should
+ * go into.
+ *********************************************************************/
+var everyRowPassed = function (reducedCSV) {
+    return reducedCSV.every(function (row) {
+        if (row.everyTaskSuccessful) {
+            return true;
+        } else {
+            return false;
+        }
+    });
 };
 
 /********************************************************************
  * appendErrorLog
  *********************************************************************/
-var appendErrorLog = function (reducedCSV) {
+var appendErrorLog = function (reducedCSV, allPassed) {
     // TODO -- Finish appendErrorLog Function. Determine how to output file. (probably in callback function)
-    reducedCSV.forEach(row => {
-        if (!row.everyTaskSuccessful){
-            errorDocument += row.thisFileNameIs + ':\n\t';
-            Object.keys(row.completedStatus).forEach(function (task) {
-                if (row.completedStatus[task].status === false){
-                    console.log('Test');
-                }
-            });
-        }
-    });
+    // console.log(reducedCSV.options.currentFile);
+    if (!allPassed) {
+        errorDocument += '\n' + reducedCSV.options.currentFile + ':\n\t';
+        reducedCSV.forEach((row, rowIndex) => {
+            if (!row.everyTaskSuccessful) {
+                Object.keys(row.completedStatus).forEach(function (task) {
+                    if (row.completedStatus[task].status === false) {
+                        if (row.id !== undefined){
+                            errorDocument += 'At ID -- ' + row.id + ' -- '  + 'task: "' + task.padEnd(25, ' ') + '": ' + row.completedStatus[task].message + '\n\t';
+                        } else if (false/* row.passagename !== undefined && row.questionname !== undefined */) {
+                            errorDocument += 'At ' + row.passagename + ', ' + row.questionname + ', task: "' + task.padEnd(25, ' ') + '": ' + row.completedStatus[task].message + '\n\t';
+                        } else {
+                            errorDocument += 'At Row ' + rowIndex + ', task: "' + task.padEnd(25, ' ') + '": ' + row.completedStatus[task].message + '\n\t';
+                        }
+                    }
+                });
+            }
+        });
+    } else {
+        true;
+    }
+    
 };
 
 /********************************************************************
@@ -267,8 +314,13 @@ var writeFile = function (outputDirectory, outputName, csvToOutput) {
  *********************************************************************/
 function main() {
     // Get Array of Files to Cycle Through
-    const targetDirectory = './csv-tests/ec3/';
-    var outputDirectory = './csv-tests/ec3/ec3-outputs/';
+    // const targetDirectory = './csv-tests/ec3/ec3-production/ec3-csvs-originals/'; // for production
+    // var od_noErrors = './csv-tests/ec3/ec3-production/ec3-csvs-outputs/ec3-csvs-no-errors/'; // for production
+    // var od_foundErrors = './csv-tests/ec3/ec3-production/ec3-csvs-outputs/ec3-csvs-found-errors/'; // for production
+    const targetDirectory = './csv-tests/ec3/ec3-testing/ec3-test-originals/'; // for testing
+    var od_noErrors = './csv-tests/ec3/ec3-testing/ec3-test-outputs/ec3-test-csvs-no-errors/'; // for testing
+    var od_foundErrors = './csv-tests/ec3/ec3-testing/ec3-test-outputs/ec3-test-csvs-found-errors/'; // for testing
+    var outputDirectory = '';
     const targetFiles = [
         'FP_L1_DE_T11_POC4_V1_CSS.csv',
         'FP_R1_NA_T8_POC4_V1_CSS.csv',
@@ -293,15 +345,19 @@ function main() {
         csvrOptions.updateCanDoField = shouldUpdateCando(file); // update option's updateCanDoField variable
         var csv = fs.readFileSync(targetDirectory + file, 'utf8'); // Read-In File
         var outputtedCSV = csvr(csv, csvrOptions, reducer); // Send it through reducer
-        var reducedCSV = outputtedCSV.getReducedCSV();
+        var reducedCSV = outputtedCSV.getReducedCSV(); // get reduced, unformatted csv
         var csvOutput = outputtedCSV.getFormattedCSV(); // get reduced, formatted csv
-        appendErrorLog(reducedCSV);
-        // TODO Create an output directory for files that pass all tests and files that don't pass all tests.
+        var allPassed = everyRowPassed(reducedCSV);
+        appendErrorLog(reducedCSV, allPassed); // Write Errors from each row to error log
+        if (allPassed) outputDirectory = od_noErrors; // Determine whether file-output should go to 
+        else outputDirectory = od_foundErrors;        // error or no-error folder.
+        // outputDirectory = od_noErrors // Uncomment this line if you want all files to go to the same place
         writeFile(outputDirectory, file, csvOutput);
         callback(null);
     };
     asynclib.each(targetFiles, readEditWrite, function (err) {
         if (err) console.error(err);
+        else console.log(errorDocument);
     });
 }
 
