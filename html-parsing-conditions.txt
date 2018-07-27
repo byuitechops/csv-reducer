@@ -108,9 +108,32 @@ Points to Hit on:
 
 
 UNUSED CODE THAT MAY WANT TO BE REFERRED TO LATER::
+// Goes instead of replace Text
 // curr.passagetext = curr.passagetext.replace(/<h1>Instructions<\/h1>[\S\s]*?(<h2>[\s\S]*?Warm-up[\s\S]*?<\/h2>)/i, '<h2>Definitions</h2><h2>Warm-up</h2>');
 // curr.passagetext = curr.passagetext.replace(/<h2>Warm-up<\/h2>[\S\s]*?(<p><strong>|<h2>Passage<\/h2>)/i, /$1/);
 
+// Longer Version of current replaceText function
+// var replaceText = function (acc, curr, $) {
+//     if ($('h1').first().text().toLowerCase() === 'instructions') {
+//         if ($('h2').first().text().toLowerCase() === 'warm-up') {
+//             // Remove everything between h1 instructions and h2 warm-up
+//             $('h1').first().nextUntil('h2').remove('*');
+//         }
+//         // Remove instructions h1 tag
+//         $('h1').first().remove('*');
+//     }
+//     if ($('h2').first().text().toLowerCase() === 'warm-up'){
+//         // replaced warm-up with definitions
+//         $('h2').first().after('<h2>Definitions</h2>'); // add definitions h2 tag after warm-up h2 tag
+//         $('h2').first().remove(); // remove warm-up h2 tag
+//         if ($('h2').first().text().toLowerCase() === 'definitions') {
+//             // console.log($('h2').first().nextUntil('h2').not($('p').has('strong')).length);
+//             $('h2').first().nextUntil('h2').not($('p').has('strong')).remove();
+//         }
+//     }
+// };
+
+// Used at fixCheerio if {xmlMode: false}
 // if (curr.passagetext.includes('<html>')){curr.passagetext = curr.passagetext.replace(/<html>/g, '');}
 // if (curr.passagetext.includes('</html>')){curr.passagetext = curr.passagetext.replace(/<\/html>/g, '');}
 // if (curr.passagetext.includes('<head>')){curr.passagetext = curr.passagetext.replace(/<head>/g, '');}

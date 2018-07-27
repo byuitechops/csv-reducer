@@ -97,7 +97,7 @@ class ModifiedCSV {
             this.parsedCSV = this.parseCSV(this.initialCSV); // the inital parsed version
             this.options.initialHeaders = this.parseCSV.columns;
             this.reducedCSV = this.csvReducer(this.parsedCSV, reducerFunction);
-            this.reducedCSV = this.limitHeaders(this.reducedCSV);
+            // this.reducedCSV = this.limitHeaders(this.reducedCSV);
             this.newCSV = this.formatCSV(this.reducedCSV);
         }
     }

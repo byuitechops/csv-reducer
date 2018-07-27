@@ -5,6 +5,7 @@ const fs = require('fs');
 const csvr = require('./main.js');
 const cheerio = require('cheerio');
 const asynclib = require('async');
+var errorDocument = 'The Following Errors Occurred While Parsing the EC3 CSVs On ' + Date() + '\n';
 var counter = 0;
 
 /********************************************************************
@@ -38,6 +39,12 @@ var updateQuestionCanDo = function (acc, curr) {
             console.log('Updating f31 to f30!');
             curr.questioncando = 'f30'; // f31 to f30
         }
+        curr.completedStatus.canDo.status = true;
+    } else if (curr.questioncando === undefined) {
+        curr.completedStatus.canDo.status = false;
+        curr.completedStatus.canDo.message = 'questioncando field is undefined on this file!';
+    } else if (acc.options.updateCanDoField === false) {
+        delete curr.completedStatus.canDo;
     }
 };
 
@@ -48,6 +55,7 @@ var splitQuestionName = function (acc, curr) {
     var pqname = curr.questionname.replace(/\s/g, ''); //remove all spaces
     curr.questionname = pqname.replace(/passage\d+/i, '');
     curr.passagename = pqname.replace(/question\d+/i, '');
+    curr.completedStatus.splitField.status = true;
 };
 
 /********************************************************************
@@ -58,6 +66,7 @@ var deleteKeys = function (acc, curr) {
     curr.questionaudiotranscript = curr.questionaudiofilename;
     delete curr.passageaudiofilename;
     delete curr.questionaudiofilename;
+    curr.completedStatus.keyRename.status = true;
 };
 
 /********************************************************************
@@ -68,22 +77,13 @@ var deleteKeys = function (acc, curr) {
  * RETURNS: void
  *********************************************************************/
 var replaceText = function (acc, curr, $) {
-    if ($('h1').first().text().toLowerCase() === 'instructions') {
-        if ($('h2').first().text().toLowerCase() === 'warm-up') {
-            // Remove everything between h1 instructions and h2 warm-up
-            $('h1').first().nextUntil('h2').remove('*');
-        }
-        // Remove instructions h1 tag
-        $('h1').first().remove('*');
-    }
-    if ($('h2').first().text().toLowerCase() === 'warm-up'){
-        // replaced warm-up with definitions
-        $('h2').first().after('<h2>Definitions</h2>'); // add definitions h2 tag after warm-up h2 tag
-        $('h2').first().remove(); // remove warm-up h2 tag
-        if ($('h2').first().text().toLowerCase() === 'definitions') {
-            // console.log($('h2').first().nextUntil('h2').not($('p').has('strong')).length);
-            $('h2').first().nextUntil('h2').not($('p').has('strong')).remove();
-        }
+    if ($('h1').first().text().toLowerCase() === 'instructions' && $('h2').first().text().toLowerCase() === 'warm-up') {
+        $('h1').first().nextUntil('h2').add($('h1').first()).add($('h2').first().nextUntil('h2').not($('p').has('strong'))).remove('*');
+        $('h2').first().replaceWith('<h2>Definitions</h2>');
+        curr.completedStatus.passageDelete.status = true;
+    } else {
+        curr.completedStatus.passageDelete.status = false;
+        curr.completedStatus.passageDelete.message = 'Couldn\'t find (one or both of) <h1>Instructions</h1> or <h2>Warm-up</h2>!';
     }
 };
 
@@ -96,12 +96,18 @@ var replaceText = function (acc, curr, $) {
  *********************************************************************/
 var addClassDefinitions = function (acc, curr, $) {
     // Gets all the <p><strong> combinations between the first h2 tag and the next one.
-    var pstrong = $('h2').first().nextUntil('h2').filter('p').has('strong');
-    var pem = $('h2').first().nextUntil('h2').filter('p').has('em');
-    pstrong.addClass('vocab-definition');
-    pem.removeClass('vocab-definition');
-    pem.addClass('vocab-example');
-    curr.passagetext = $.html();
+    if ($('h2').first().text().toLowerCase() === 'definitions' && $('h2').last().text().toLowerCase() === 'passage') {
+        var pstrong = $('h2').first().nextUntil('h2').filter('p').has('strong');
+        var pem = $('h2').first().nextUntil('h2').filter('p').has('em');
+        pstrong.addClass('vocab-definition');
+        pem.removeClass('vocab-definition');
+        pem.addClass('vocab-example');
+        curr.completedStatus.passageClass.status = true;
+    } else {
+        curr.completedStatus.passageClass.status = false;
+        curr.completedStatus.passageClass.message = 'Couldn\'t find (one or both of) <h2>Warm-up</h2> or <h2>Passage</h2>';
+    }
+    
 };
 
 /********************************************************************
@@ -115,17 +121,20 @@ var addDivsAround = function (acc, curr, $) {
     if ($('h2').first().text().toLowerCase() === 'definitions') {
         $('h2').first().nextUntil('h2').add($('h2').first()).first().before($('<div class="definitions-container">'));
         $('h2').first().nextUntil('h2').add($('h2').first()).last().after($('<div class="addclosingdiv">heylookherethisisasentancethatwillhopefullyneverappearinanyfilefromheretotherestofforeverinanyec3courseyay</div>'));
-        // $('.addclosingdiv').replaceWith('div');
-        // $('h2').first().nextUntil('h2').add($('h2').first()).wrap($('<div class="definitions-container"></div>'));
+        curr.completedStatus.passageDivDefinition.status = true;
+    } else {
+        curr.completedStatus.passageDivDefinition.status = false;
+        curr.completedStatus.passageDivDefinition.message = 'Could not find <h2>Definitions</h2>';
     }
     if ($('h2').last().text().toLowerCase() === 'passage'){
         $('h2').last().nextAll().add($('h2').last()).first().before($('<div class="passage-container">'));
         $('h2').last().nextAll().add($('h2').last()).last().after($('<div class="addclosingdiv">heylookherethisisasentancethatwillhopefullyneverappearinanyfilefromheretotherestofforeverinanyec3courseyay</div>'));
-        // $('.addclosingdiv').replaceWith('div');
-        // $('h2').last().nextAll().add($('h2').last()).wrap($('<div class="passage-container"></div>'));
+        curr.completedStatus.passageDivPassage.status = true;
+    } else {
+        curr.completedStatus.passageDivPassage.status = false;
+        curr.completedStatus.passageDivPassage.message = 'Could not find <h2>Passage</h2>';
     }
 };
-
 /********************************************************************
  * Edit passagetext: Fix Cheerio
  * DESCRIPTION: Cheerio thinks its so smart and needs to add stuff we
@@ -139,14 +148,18 @@ var addDivsAround = function (acc, curr, $) {
 var fixCheerio = function (acc, curr) {
     if (curr.passagetext.includes('<div class="addclosingdiv">heylookherethisisasentancethatwillhopefullyneverappearinanyfilefromheretotherestofforeverinanyec3courseyay</div>')) {
         curr.passagetext = curr.passagetext.replace(/<div class="addclosingdiv">heylookherethisisasentancethatwillhopefullyneverappearinanyfilefromheretotherestofforeverinanyec3courseyay<\/div>/g, '</div>');
+        curr.completedStatus.fixCheerioAddCloseDiv.status = true;
+    } else {
+        curr.completedStatus.fixCheerioAddCloseDiv.status = false;
+        curr.completedStatus.fixCheerioAddCloseDiv.message = 'THIS IS IMPORTANT!!!\nThe Following HTML elements likely won\'t have closing <div> tags:\n<div class="definitions-container">\n<div class="passage-container">';
     }
-    if (curr.passagetext.includes('</link>')){curr.passagetext = curr.passagetext.replace(/<\/link>/g, '');}
-    // if (curr.passagetext.includes('<html>')){curr.passagetext = curr.passagetext.replace(/<html>/g, '');}
-    // if (curr.passagetext.includes('</html>')){curr.passagetext = curr.passagetext.replace(/<\/html>/g, '');}
-    // if (curr.passagetext.includes('<head>')){curr.passagetext = curr.passagetext.replace(/<head>/g, '');}
-    // if (curr.passagetext.includes('</head>')){curr.passagetext = curr.passagetext.replace(/<\/head>/g, '');}
-    // if (curr.passagetext.includes('<body>')){curr.passagetext = curr.passagetext.replace(/<body>/g, '');}
-    // if (curr.passagetext.includes('</body>')){curr.passagetext = curr.passagetext.replace(/<\/body>/g, '');}
+    if (curr.passagetext.includes('</link>')){
+        curr.passagetext = curr.passagetext.replace(/<\/link>/g, '');
+        curr.completedStatus.fixCheerioRemoveCloseLink.status = true;
+    } else {
+        curr.completedStatus.fixCheerioRemoveCloseLink.status = false;
+        curr.completedStatus.fixCheerioRemoveCloseLink.message = 'Couldn\'t find any </link> to remove!';
+    }
 };
 
 /********************************************************************
@@ -165,12 +178,70 @@ var editPassageText = function (acc, curr) {
  * Main Reducer Function
  *********************************************************************/
 var reducer = function (acc, curr, i) {
+    curr.completedStatus = {
+        splitField: {
+            status: false,
+            message: ''
+        },
+        keyRename: {
+            status: false,
+            message: ''
+        },
+        passageDelete: {
+            status: false,
+            message: ''
+        },
+        passageClass: {
+            status: false,
+            message: ''
+        },
+        passageDivDefinition: {
+            status: false,
+            message: ''
+        },
+        passageDivPassage: {
+            status: false,
+            message: ''
+        },
+        fixCheerioAddCloseDiv: {
+            status: false,
+            message: ''
+        },
+        fixCheerioRemoveCloseLink: {
+            status: false,
+            message: ''
+        },
+        canDo: {
+            status: false,
+            message: ''
+        }
+    };
     updateQuestionCanDo(acc, curr);
     deleteKeys(acc, curr);
     splitQuestionName(acc, curr);
     editPassageText(acc, curr);
+    curr.everyTaskSuccessful = Object.keys(curr.completedStatus).every(function(task){
+        return curr.completedStatus[task].status;
+    });
+    curr.thisFileNameIs = acc.currentFile;
     acc.push(curr);
     return acc;
+};
+
+/********************************************************************
+ * appendErrorLog
+ *********************************************************************/
+var appendErrorLog = function (reducedCSV) {
+    reducedCSV.forEach(row => {
+        if (!row.everyTaskSuccessful){
+            errorDocument += row.thisFileNameIs + ':\n\t';
+            Object.keys(row.completedStatus).forEach(function (task) {
+                if (row.completedStatus[task] === false){
+                    console.log('Test');
+                }
+            });
+        }
+    });
 };
 
 /********************************************************************
@@ -214,12 +285,15 @@ function main() {
     };
     // cycle through each file
     var readEditWrite = function (file, callback) {
+        csvrOptions.currentFile = file;
         csvrOptions.updateCanDoField = shouldUpdateCando(file); // update option's updateCanDoField variable
         var csv = fs.readFileSync(targetDirectory + file, 'utf8'); // Read-In File
-        var reducedcsv = csvr(csv, csvrOptions, reducer); // Send it through reducer
-        var csvOutput = reducedcsv.getFormattedCSV(); // get reduced, formatted csv
+        var outputtedCSV = csvr(csv, csvrOptions, reducer); // Send it through reducer
+        var reducedCSV = outputtedCSV.getReducedCSV();
+        var csvOutput = outputtedCSV.getFormattedCSV(); // get reduced, formatted csv
+        appendErrorLog(reducedCSV);
         writeFile(outputDirectory, file, csvOutput);
-        callback();
+        callback(null);
     };
     asynclib.each(targetFiles, readEditWrite, function (err) {
         if (err) console.error(err);
