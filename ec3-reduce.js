@@ -6,6 +6,7 @@ const csvr = require('./main.js');
 const cheerio = require('cheerio');
 const asynclib = require('async');
 var errorDocument = 'The Following Errors Occurred While Parsing the EC3 CSVs On ' + Date() + '\n';
+var uniqueString = '<div class="addclosingdiv">heylookherethisisasentancethatwillhopefullyneverappearinanyfilefromheretotherestofforeverinanyec3courseyay</div>';
 var counter = 0;
 
 /********************************************************************
@@ -79,7 +80,8 @@ var deleteKeys = function (acc, curr) {
 var replaceText = function (acc, curr, $) {
     if ($('h1').first().text().toLowerCase() === 'instructions' && $('h2').first().text().toLowerCase() === 'warm-up') {
         $('h1').first().nextUntil('h2').add($('h1').first()).add($('h2').first().nextUntil('h2').not($('p').has('strong'))).remove('*');
-        $('h2').first().replaceWith('<h2>Definitions</h2>');
+        $('h2').first().after('<h2>Definitions</h2>');
+        $('h2').first().remove();
         curr.completedStatus.passageDelete.status = true;
     } else {
         curr.completedStatus.passageDelete.status = false;
@@ -120,7 +122,7 @@ var addClassDefinitions = function (acc, curr, $) {
 var addDivsAround = function (acc, curr, $) {
     if ($('h2').first().text().toLowerCase() === 'definitions') {
         $('h2').first().nextUntil('h2').add($('h2').first()).first().before($('<div class="definitions-container">'));
-        $('h2').first().nextUntil('h2').add($('h2').first()).last().after($('<div class="addclosingdiv">heylookherethisisasentancethatwillhopefullyneverappearinanyfilefromheretotherestofforeverinanyec3courseyay</div>'));
+        $('h2').first().nextUntil('h2').add($('h2').first()).last().after($(uniqueString));
         curr.completedStatus.passageDivDefinition.status = true;
     } else {
         curr.completedStatus.passageDivDefinition.status = false;
@@ -128,7 +130,7 @@ var addDivsAround = function (acc, curr, $) {
     }
     if ($('h2').last().text().toLowerCase() === 'passage'){
         $('h2').last().nextAll().add($('h2').last()).first().before($('<div class="passage-container">'));
-        $('h2').last().nextAll().add($('h2').last()).last().after($('<div class="addclosingdiv">heylookherethisisasentancethatwillhopefullyneverappearinanyfilefromheretotherestofforeverinanyec3courseyay</div>'));
+        $('h2').last().nextAll().add($('h2').last()).last().after($(uniqueString));
         curr.completedStatus.passageDivPassage.status = true;
     } else {
         curr.completedStatus.passageDivPassage.status = false;
@@ -146,8 +148,9 @@ var addDivsAround = function (acc, curr, $) {
  * RETURNS: void
  *********************************************************************/
 var fixCheerio = function (acc, curr) {
-    if (curr.passagetext.includes('<div class="addclosingdiv">heylookherethisisasentancethatwillhopefullyneverappearinanyfilefromheretotherestofforeverinanyec3courseyay</div>')) {
-        curr.passagetext = curr.passagetext.replace(/<div class="addclosingdiv">heylookherethisisasentancethatwillhopefullyneverappearinanyfilefromheretotherestofforeverinanyec3courseyay<\/div>/g, '</div>');
+    var regexForUniqueString = new RegExp(uniqueString, 'g');
+    if (curr.passagetext.includes(uniqueString)) {
+        curr.passagetext = curr.passagetext.replace(regexForUniqueString, '</div>');
         curr.completedStatus.fixCheerioAddCloseDiv.status = true;
     } else {
         curr.completedStatus.fixCheerioAddCloseDiv.status = false;
