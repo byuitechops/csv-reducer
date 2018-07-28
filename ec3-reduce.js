@@ -2,12 +2,37 @@
  * Declare Dependancies
  *********************************************************************/
 const fs = require('fs');
+// const path = require('path');
 const csvr = require('./main.js');
 const cheerio = require('cheerio');
 const asynclib = require('async');
 var errorDocument = 'The Following Errors Occurred While Parsing the EC3 CSVs On ' + Date() + '\n';
+var errorHeader = '\nThe Following Files Had One or More Error:\n';
+var errorBody = '\n';
 var uniqueString = '<div class="addclosingdiv">heylookherethisisasentancethatwillhopefullyneverappearinanyfilefromheretotherestofforeverinanyec3courseyay</div>';
-var counter = 0;
+
+const targetDirectory = './csv-tests/ec3/ec3-production/ec3-csvs-originals/'; // for production
+var od_noErrors = './csv-tests/ec3/ec3-production/ec3-csvs-outputs/ec3-csvs-no-errors/'; // for production
+var od_foundErrors = './csv-tests/ec3/ec3-production/ec3-csvs-outputs/ec3-csvs-found-errors/'; // for production
+// const targetFiles = getTargetFiles(targetDirectory);
+// const targetDirectory = './csv-tests/ec3/ec3-testing/ec3-test-originals/'; // for testing
+// var od_noErrors = './csv-tests/ec3/ec3-testing/ec3-test-outputs/ec3-test-csvs-no-errors/'; // for testing
+// var od_foundErrors = './csv-tests/ec3/ec3-testing/ec3-test-outputs/ec3-test-csvs-found-errors/'; // for testing
+// const targetFiles = ['FP_L1_DE_T11_POC4_V1_CSS.csv','FP_R1_NA_T8_POC4_V1_CSS.csv','FP_S1_NA_T9_POC4_V1_CSS.csv','FP_W1_NE_T5_POC4_V1_CSS.csv']; // for testing
+
+/********************************************************************
+ * read in a list of files to 
+ *********************************************************************/
+var getTargetFiles = function (targetDirectory) {
+    var filesInDirectory = fs.readdirSync(targetDirectory);
+    var desiredFilesOnly = filesInDirectory.reduce(function (acc, curr) {
+        if (curr.slice(-4) === '.csv' && curr.includes('V1')){
+            acc.push(curr);
+        }
+        return acc;
+    }, []);
+    return desiredFilesOnly;
+};
 
 /********************************************************************
  * should the questioncando field be updated?
@@ -84,7 +109,7 @@ var deleteKeys = function (acc, curr) {
         } else if (curr.passageaudiofilename !== undefined && curr.questionaudiofilename === undefined) {
             errorMessage = 'questionaudiofilename field is undefined on this file!...Adding blank definition...';
         } else if (curr.passageaudiofilename === undefined && curr.questionaudiofilename === undefined) {
-            errorMessage = 'Both passageaudiofilename and questionaudiofilename field are undefined on this file!...Attempting to add keys anyway...';
+            errorMessage = 'Both passageaudiofilename and questionaudiofilename field are undefined on this file!...Attempting to copy keys anyway...';
         }
         curr.completedStatus.keyRename.message = errorMessage;
     }
@@ -189,12 +214,25 @@ var fixCheerio = function (acc, curr) {
  * Edit passagetext
  *********************************************************************/
 var editPassageText = function (acc, curr) {
-    var $ = cheerio.load(curr.passagetext, {xmlMode: true}); // Declare Cheerio Object
-    replaceText(acc, curr, $); // "Passage Content to Delete" Section
-    addClassDefinitions(acc, curr, $); // "Adding Class Definitions"
-    addDivsAround(acc, curr, $); // "Add Divs" Section
-    curr.passagetext = $.html();
-    fixCheerio(acc, curr);
+    try {
+        var $ = cheerio.load(curr.passagetext, {xmlMode: true}); // Declare Cheerio Object
+        replaceText(acc, curr, $); // "Passage Content to Delete" Section
+        addClassDefinitions(acc, curr, $); // "Adding Class Definitions"
+        addDivsAround(acc, curr, $); // "Add Divs" Section
+        curr.passagetext = $.html();
+        fixCheerio(acc, curr);
+        curr.completedStatus.cheerioCanReadPassage.status = true;
+    } catch (err) {
+        errorBody += acc.options.currentFile + '\n' + err;
+        curr.completedStatus.cheerioCanReadPassage.status = false;
+        curr.completedStatus.cheerioCanReadPassage.message = 'FATAL!!! : Cheerio was unable to edit the passagetext\'s HTML (Did it have any?)!';
+        delete curr.completedStatus.passageDelete;
+        delete curr.completedStatus.passageClass;
+        delete curr.completedStatus.passageDivDefinition;
+        delete curr.completedStatus.passageDivPassage;
+        delete curr.completedStatus.fixCheerioAddCloseDiv;
+        delete curr.completedStatus.fixCheerioRemoveCloseLink;
+    }
 };
 
 /********************************************************************
@@ -207,6 +245,10 @@ var reducer = function (acc, curr, i) {
             message: 'Default Message'
         },
         keyRename: {
+            status: false,
+            message: 'Default Message'
+        },
+        cheerioCanReadPassage: {
             status: false,
             message: 'Default Message'
         },
@@ -270,20 +312,31 @@ var everyRowPassed = function (reducedCSV) {
  * appendErrorLog
  *********************************************************************/
 var appendErrorLog = function (reducedCSV, allPassed) {
-    // TODO -- Finish appendErrorLog Function. Determine how to output file. (probably in callback function)
-    // console.log(reducedCSV.options.currentFile);
+    reducedCSV.forEach(function (row) {
+        // row.completedStatus.splitField = true;                // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // row.completedStatus.keyRename = true;                 // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // row.completedStatus.cheerioCanReadPassage = true;     // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // row.completedStatus.passageDelete = true;             // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // row.completedStatus.passageClass = true;              // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // row.completedStatus.passageDivDefinition =true;       // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // row.completedStatus.passageDivPassage = true;         // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // row.completedStatus.fixCheerioAddCloseDiv = true;     // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // row.completedStatus.fixCheerioRemoveCloseLink = true; // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // row.completedStatus.updateCanDo = true;               // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+    });
     if (!allPassed) {
-        errorDocument += '\n' + reducedCSV.options.currentFile + ':\n\t';
+        errorHeader += reducedCSV.options.currentFile + '\n';
+        errorBody += '\n' + reducedCSV.options.currentFile + ':\n\t';
         reducedCSV.forEach((row, rowIndex) => {
             if (!row.everyTaskSuccessful) {
                 Object.keys(row.completedStatus).forEach(function (task) {
                     if (row.completedStatus[task].status === false) {
-                        if (row.id !== undefined){
-                            errorDocument += 'At ID -- ' + row.id + ' -- '  + 'task: "' + task.padEnd(25, ' ') + '": ' + row.completedStatus[task].message + '\n\t';
+                        if (false/* row.id !== undefined */){
+                            errorBody += 'At ID -- ' + row.id + ' -- '  + 'task: "' + task.padEnd(25, ' ') + '": ' + row.completedStatus[task].message + '\n\t';
                         } else if (false/* row.passagename !== undefined && row.questionname !== undefined */) {
-                            errorDocument += 'At ' + row.passagename + ', ' + row.questionname + ', task: "' + task.padEnd(25, ' ') + '": ' + row.completedStatus[task].message + '\n\t';
+                            errorBody += 'At ' + row.passagename + ', ' + row.questionname + ', task: "' + task.padEnd(25, ' ') + '": ' + row.completedStatus[task].message + '\n\t';
                         } else {
-                            errorDocument += 'At Row ' + rowIndex + ', task: "' + task.padEnd(25, ' ') + '": ' + row.completedStatus[task].message + '\n\t';
+                            errorBody += ('At Row ' + (rowIndex+2).toString().padStart(2, '0') + ', task: "' + task).padEnd(45, ' ') + '": ' + row.completedStatus[task].message + '\n\t';
                         }
                     }
                 });
@@ -298,9 +351,9 @@ var appendErrorLog = function (reducedCSV, allPassed) {
 /********************************************************************
  * async outputfile
  *********************************************************************/
-var writeFile = function (outputDirectory, outputName, csvToOutput) {
-    var outputLocation = outputDirectory + Date.now() + '_' + outputName;
-    fs.writeFile(outputLocation, csvToOutput, function (err) {
+var writeFile = function (outputDirectory, outputName, dataToOutput) {
+    var outputLocation = outputDirectory /* + Date.now() */ + '_' + outputName;
+    fs.writeFile(outputLocation, dataToOutput, function (err) {
         if (err) {
             console.error(err);
         } else {
@@ -313,20 +366,16 @@ var writeFile = function (outputDirectory, outputName, csvToOutput) {
  * main
  *********************************************************************/
 function main() {
+    var outputDirectory = '';
     // Get Array of Files to Cycle Through
     // const targetDirectory = './csv-tests/ec3/ec3-production/ec3-csvs-originals/'; // for production
     // var od_noErrors = './csv-tests/ec3/ec3-production/ec3-csvs-outputs/ec3-csvs-no-errors/'; // for production
     // var od_foundErrors = './csv-tests/ec3/ec3-production/ec3-csvs-outputs/ec3-csvs-found-errors/'; // for production
-    const targetDirectory = './csv-tests/ec3/ec3-testing/ec3-test-originals/'; // for testing
-    var od_noErrors = './csv-tests/ec3/ec3-testing/ec3-test-outputs/ec3-test-csvs-no-errors/'; // for testing
-    var od_foundErrors = './csv-tests/ec3/ec3-testing/ec3-test-outputs/ec3-test-csvs-found-errors/'; // for testing
-    var outputDirectory = '';
-    const targetFiles = [
-        'FP_L1_DE_T11_POC4_V1_CSS.csv',
-        'FP_R1_NA_T8_POC4_V1_CSS.csv',
-        'FP_S1_NA_T9_POC4_V1_CSS.csv',
-        'FP_W1_NE_T5_POC4_V1_CSS.csv'
-    ];
+    const targetFiles = getTargetFiles(targetDirectory);
+    // // const targetDirectory = './csv-tests/ec3/ec3-testing/ec3-test-originals/'; // for testing
+    // // var od_noErrors = './csv-tests/ec3/ec3-testing/ec3-test-outputs/ec3-test-csvs-no-errors/'; // for testing
+    // // var od_foundErrors = './csv-tests/ec3/ec3-testing/ec3-test-outputs/ec3-test-csvs-found-errors/'; // for testing
+    // const targetFiles = ['FP_L1_DE_T11_POC4_V1_CSS.csv','FP_R1_NA_T8_POC4_V1_CSS.csv','FP_S1_NA_T9_POC4_V1_CSS.csv','FP_W1_NE_T5_POC4_V1_CSS.csv']; // for testing
     // Set Options:
     var csvrOptions = {
         headersOut: [
@@ -352,12 +401,18 @@ function main() {
         if (allPassed) outputDirectory = od_noErrors; // Determine whether file-output should go to 
         else outputDirectory = od_foundErrors;        // error or no-error folder.
         // outputDirectory = od_noErrors // Uncomment this line if you want all files to go to the same place
-        writeFile(outputDirectory, file, csvOutput);
+        // writeFile(outputDirectory, file, csvOutput);
+        var outputLocation = outputDirectory + Date.now() + '_' + file;
+        console.log('Output file to: ' + outputLocation);
         callback(null);
     };
     asynclib.each(targetFiles, readEditWrite, function (err) {
         if (err) console.error(err);
-        else console.log(errorDocument);
+        else {
+            errorDocument += errorHeader + errorBody;
+            writeFile(od_foundErrors, '_errorLog.txt', errorDocument);
+            // console.log(errorDocument); 
+        }
     });
 }
 
