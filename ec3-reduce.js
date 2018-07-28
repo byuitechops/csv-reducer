@@ -152,7 +152,7 @@ var addClassDefinitions = function (acc, curr, $) {
         curr.completedStatus.passageClass.status = true;
     } else {
         curr.completedStatus.passageClass.status = false;
-        curr.completedStatus.passageClass.message = 'Couldn\'t find (one or both of) <h2>Warm-up</h2> or <h2>Passage</h2>';
+        curr.completedStatus.passageClass.message = 'Couldn\'t find (one or both of) <h2>Definitions</h2> or <h2>Passage</h2>';
     }
     
 };
@@ -188,8 +188,7 @@ var addDivsAround = function (acc, curr, $) {
  *              don't want in both html and xml mode. This function
  *              fixes those problems by editing the string directly
  *              and putting stuff where it belongs.
- * USE: in reduce function.Needs accumulator, current item, and
- *      cheerio object 
+ * USE: in reduce function.Needs accumulator, and current item
  * RETURNS: void
  *********************************************************************/
 var fixCheerio = function (acc, curr) {
@@ -284,6 +283,7 @@ var reducer = function (acc, curr, i) {
     updateQuestionCanDo(acc, curr);
     deleteKeys(acc, curr);
     splitQuestionName(acc, curr);
+    // TODO Add Change-Difficulty-Level Function Here
     editPassageText(acc, curr);
     curr.everyTaskSuccessful = Object.keys(curr.completedStatus).every(function(task){
         return curr.completedStatus[task].status;
@@ -312,19 +312,19 @@ var everyRowPassed = function (reducedCSV) {
  * appendErrorLog
  *********************************************************************/
 var appendErrorLog = function (reducedCSV, allPassed) {
-    // Override completedStatus of reducedCSV to filter which items make it onto the error log. (Will effect every row on every file).
+    // Override completedStatus of reducedCSV to filter which items make it onto the error log. (Any Non-Commented Lines Will effect every row on every file).
     reducedCSV.forEach(function (row) {
-        try{row.completedStatus.splitField.status = true;}catch(e){}                // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        try{row.completedStatus.keyRename.status = true;}catch(e){}                 // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        try{row.completedStatus.cheerioCanReadPassage.status = true;}catch(e){}     // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        try{row.completedStatus.passageDelete.status = true;}catch(e){}             // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        try{row.completedStatus.passageClass.status = true;}catch(e){}              // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        try{row.completedStatus.passageDivDefinition.status =true;}catch(e){}       // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        try{row.completedStatus.passageDivPassage.status = true;}catch(e){}         // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        try{row.completedStatus.fixCheerioAddCloseDiv.status = true;}catch(e){}     // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        try{row.completedStatus.fixCheerioRemoveCloseLink.status = true;}catch(e){} // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        try{row.completedStatus.updateCanDo.status = true;}catch(e){}               // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        row.everyTaskSuccessful = Object.keys(row.completedStatus).every(function (task) {return row.completedStatus[task].status;});
+        // try{row.completedStatus.splitField.status = true;}catch(e){}                // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // try{row.completedStatus.keyRename.status = true;}catch(e){}                 // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // try{row.completedStatus.cheerioCanReadPassage.status = true;}catch(e){}     // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // try{row.completedStatus.passageDelete.status = true;}catch(e){}             // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // try{row.completedStatus.passageClass.status = true;}catch(e){}              // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // try{row.completedStatus.passageDivDefinition.status =true;}catch(e){}       // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // try{row.completedStatus.passageDivPassage.status = true;}catch(e){}         // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // try{row.completedStatus.fixCheerioAddCloseDiv.status = true;}catch(e){}     // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // try{row.completedStatus.fixCheerioRemoveCloseLink.status = true;}catch(e){} // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // try{row.completedStatus.updateCanDo.status = true;}catch(e){}               // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // row.everyTaskSuccessful = Object.keys(row.completedStatus).every(function (task) {return row.completedStatus[task].status;});
         // row.everyTaskSuccessful = true; 
     });
     allPassed = everyRowPassed(reducedCSV);
@@ -372,17 +372,9 @@ var writeFile = function (outputDirectory, outputName, dataToOutput) {
  *********************************************************************/
 function main() {
     var outputDirectory = '';
-    // Get Array of Files to Cycle Through
-    // const targetDirectory = './csv-tests/ec3/ec3-production/ec3-csvs-originals/'; // for production
-    // var od_noErrors = './csv-tests/ec3/ec3-production/ec3-csvs-outputs/ec3-csvs-no-errors/'; // for production
-    // var od_foundErrors = './csv-tests/ec3/ec3-production/ec3-csvs-outputs/ec3-csvs-found-errors/'; // for production
-    // const targetFiles = getTargetFiles(targetDirectory);
-    // // const targetDirectory = './csv-tests/ec3/ec3-testing/ec3-test-originals/'; // for testing
-    // // var od_noErrors = './csv-tests/ec3/ec3-testing/ec3-test-outputs/ec3-test-csvs-no-errors/'; // for testing
-    // // var od_foundErrors = './csv-tests/ec3/ec3-testing/ec3-test-outputs/ec3-test-csvs-found-errors/'; // for testing
-    const targetFiles = ['FP_L1_DE_T11_POC4_V1_CSS.csv','FP_R1_NA_T8_POC4_V1_CSS.csv','FP_S1_NA_T9_POC4_V1_CSS.csv','FP_W1_NE_T5_POC4_V1_CSS.csv']; // for testing
-    // Set Options:
-    var csvrOptions = {
+    const targetFiles = getTargetFiles(targetDirectory); // Get Array of Files to Cycle Through
+    // const targetFiles = ['FP_L1_DE_T11_POC4_V1_CSS.csv','FP_R1_NA_T8_POC4_V1_CSS.csv','FP_S1_NA_T9_POC4_V1_CSS.csv','FP_W1_NE_T5_POC4_V1_CSS.csv']; // for testing
+    var csvrOptions = { // Set Options:
         headersOut: [
             'id', 'skill', 'level', 'difficultylevel', 'function', 'passagetext',
             'passagetexttype', 'passagetype', 'passageaudiotranscript', 'passagename',
@@ -401,24 +393,26 @@ function main() {
         var outputtedCSV = csvr(csv, csvrOptions, reducer); // Send it through reducer
         var reducedCSV = outputtedCSV.getReducedCSV(); // get reduced, unformatted csv
         var csvOutput = outputtedCSV.getFormattedCSV(); // get reduced, formatted csv
-        var allPassed = everyRowPassed(reducedCSV);
+        var allPassed = everyRowPassed(reducedCSV); // Find out if a file passed every test
         appendErrorLog(reducedCSV, allPassed); // Write Errors from each row to error log
-        if (allPassed) outputDirectory = od_noErrors; // Determine whether file-output should go to 
+        if (allPassed) outputDirectory = od_noErrors; // Determine whether file-output should go to >>
         else outputDirectory = od_foundErrors;        // error or no-error folder.
         // outputDirectory = od_noErrors // Uncomment this line if you want all files to go to the same place
-        // writeFile(outputDirectory, file, csvOutput);
+        // TODO Create a Function that will Take Each File Name and Change it to the new Naming Format.
+        // writeFile(outputDirectory, file, csvOutput); // Write the File
         var outputLocation = outputDirectory + Date.now() + '_' + file;
         // console.log('Output file to: ' + outputLocation);
         callback(null);
     };
+    // This is where the cycling really happens:
     asynclib.each(targetFiles, readEditWrite, function (err) {
         if (err) console.error(err);
         else {
             errorDocument += errorHeader + errorBody;
-            writeFile(od_foundErrors, '_errorLog.txt', errorDocument);
-            // console.log(errorDocument); 
+            writeFile(od_foundErrors, '_errorLog.txt', errorDocument); // Write Error-Log Document
         }
     });
+    // DONE
 }
 
 main();
