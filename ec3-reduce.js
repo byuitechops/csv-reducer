@@ -68,7 +68,7 @@ var updateQuestionCanDo = function (acc, curr) {
         curr.completedStatus.updateCanDo.status = true;
     } else if (curr.questioncando === undefined) {
         curr.completedStatus.updateCanDo.status = false;
-        curr.completedStatus.updateCanDo.message = 'questioncando field is undefined on this file!';
+        curr.completedStatus.updateCanDo.message = 'WARNING: questioncando field is undefined on this file!';
     } else if (acc.options.updateCanDoField === false) {
         delete curr.completedStatus.updateCanDo;
     }
@@ -85,7 +85,7 @@ var splitQuestionName = function (acc, curr) {
         curr.completedStatus.splitField.status = true;
     } else {
         curr.completedStatus.splitField.status = false;
-        curr.completedStatus.splitField.message = 'questionname field does not exist on this file!';
+        curr.completedStatus.splitField.message = 'WARNING: questionname field does not exist on this file!';
     }
 };
 
@@ -105,11 +105,11 @@ var deleteKeys = function (acc, curr) {
         curr.completedStatus.keyRename.status = false;
         let errorMessage = '';
         if (curr.passageaudiofilename === undefined && curr.questionaudiofilename !== undefined) {
-            errorMessage = 'passageaudiofilename field is undefined on this file!...Adding blank definition...';
+            errorMessage = 'WARNING: passageaudiofilename field is undefined on this file!...Adding blank definition...';
         } else if (curr.passageaudiofilename !== undefined && curr.questionaudiofilename === undefined) {
-            errorMessage = 'questionaudiofilename field is undefined on this file!...Adding blank definition...';
+            errorMessage = 'WARNING: questionaudiofilename field is undefined on this file!...Adding blank definition...';
         } else if (curr.passageaudiofilename === undefined && curr.questionaudiofilename === undefined) {
-            errorMessage = 'Both passageaudiofilename and questionaudiofilename field are undefined on this file!...Attempting to copy keys anyway...';
+            errorMessage = 'WARNING: Both passageaudiofilename and questionaudiofilename field are undefined on this file!...Attempting to copy keys anyway...';
         }
         curr.completedStatus.keyRename.message = errorMessage;
     }
@@ -123,14 +123,29 @@ var deleteKeys = function (acc, curr) {
  * RETURNS: void
  *********************************************************************/
 var replaceText = function (acc, curr, $) {
-    if ($('h1').first().text().toLowerCase() === 'instructions' && $('h2').first().text().toLowerCase() === 'warm-up') {
+    var fh1 = $('h1').first().text().toLowerCase();
+    var fh2 = $('h2').first().text().toLowerCase();
+    var lh2 = $('h2').last().text().toLowerCase();
+    if (fh1 === 'instructions' && fh2 === 'warm-up') {
         $('h1').first().nextUntil('h2').add($('h1').first()).add($('h2').first().nextUntil('h2').not($('p').has('strong'))).remove('*');
         $('h2').first().after('<h2>Definitions</h2>');
         $('h2').first().remove();
         curr.completedStatus.passageDelete.status = true;
+    } else if (fh1 === 'instructions' && fh2 === 'passage') {
+        console.log(acc.options.currentFile + ' --- first h2 tag is <h2>Passage</h2>');
+        $('h1').first().nextUntil('h2').add($('h1').first()).not($('p').has('strong')).remove('*');
+        $('p').has('strong').first().before('<h2>Definitions</h2>');
+        curr.completedStatus.passageDelete.status = true;
+        curr.completedStatus.passageDelete.message = 'NOTE: first h2 tag is <h2>Passage</h2>';
     } else {
         curr.completedStatus.passageDelete.status = false;
-        curr.completedStatus.passageDelete.message = 'Couldn\'t find (one or both of) <h1>Instructions</h1> or <h2>Warm-up</h2>!';
+        if (fh1 !== 'instructions' && fh2 === 'warm-up') {
+            curr.completedStatus.passageDelete.message = 'ERR0R: Couldn\'t find "<h1>Instructions</h1>!" (replaceText Function)';
+        } else if ($('h2').first().text().toLowerCase() !== 'warm-up' && $('h1').first().text().toLowerCase() === 'instructions') {
+            curr.completedStatus.passageDelete.message = 'ERR0R: Couldn\'t find "<h2>Warm-up</h2>!" (replaceText Function)';
+        } else {
+            curr.completedStatus.passageDelete.message = 'ERR0R: Couldn\'t find both "<h1>Instructions</h1>" and "<h2>Warm-up</h2>!" (replaceText Function)';
+        }
     }
 };
 
@@ -152,9 +167,14 @@ var addClassDefinitions = function (acc, curr, $) {
         curr.completedStatus.passageClass.status = true;
     } else {
         curr.completedStatus.passageClass.status = false;
-        curr.completedStatus.passageClass.message = 'Couldn\'t find (one or both of) <h2>Definitions</h2> or <h2>Passage</h2>';
+        if ($('h2').first().text().toLowerCase() !== 'definitions' && $('h2').last().text().toLowerCase() === 'passage') {
+            curr.completedStatus.passageClass.message = 'ERR0R: Couldn\'t find "<h2>Definitions</h2>" (addClassDefinitions Function)';
+        } else if ($('h2').first().text().toLowerCase() === 'definitions' && $('h2').last().text().toLowerCase() !== 'passage') {
+            curr.completedStatus.passageClass.message = 'ERR0R: Couldn\'t find "<h2>Passage</h2>" (addClassDefinitions Function)';
+        } else {
+            curr.completedStatus.passageClass.message = 'ERR0R: Couldn\'t find both "<h2>Definitions</h2>" and "<h2>Passage</h2>" (addClassDefinitions Function)';
+        }
     }
-    
 };
 
 /********************************************************************
@@ -165,13 +185,14 @@ var addClassDefinitions = function (acc, curr, $) {
  * RETURNS: void
  *********************************************************************/
 var addDivsAround = function (acc, curr, $) {
+    // console.dir($('h2').first().text().toLowerCase());
     if ($('h2').first().text().toLowerCase() === 'definitions') {
         $('h2').first().nextUntil('h2').add($('h2').first()).first().before($('<div class="definitions-container">'));
         $('h2').first().nextUntil('h2').add($('h2').first()).last().after($(uniqueString));
         curr.completedStatus.passageDivDefinition.status = true;
     } else {
         curr.completedStatus.passageDivDefinition.status = false;
-        curr.completedStatus.passageDivDefinition.message = 'Could not find <h2>Definitions</h2>';
+        curr.completedStatus.passageDivDefinition.message = 'ERR0R: Couldn\'t find "<h2>Definitions</h2>" (addDivsAround Function)';
     }
     if ($('h2').last().text().toLowerCase() === 'passage'){
         $('h2').last().nextAll().add($('h2').last()).first().before($('<div class="passage-container">'));
@@ -179,7 +200,7 @@ var addDivsAround = function (acc, curr, $) {
         curr.completedStatus.passageDivPassage.status = true;
     } else {
         curr.completedStatus.passageDivPassage.status = false;
-        curr.completedStatus.passageDivPassage.message = 'Could not find <h2>Passage</h2>';
+        curr.completedStatus.passageDivPassage.message = 'ERR0R: Couldn\'t find "<h2>Passage</h2>" (addDivsAround Function)';
     }
 };
 /********************************************************************
@@ -198,14 +219,14 @@ var fixCheerio = function (acc, curr) {
         curr.completedStatus.fixCheerioAddCloseDiv.status = true;
     } else {
         curr.completedStatus.fixCheerioAddCloseDiv.status = false;
-        curr.completedStatus.fixCheerioAddCloseDiv.message = 'THIS IS IMPORTANT!!! --> "<div class="definitions-container">" AND "<div class="passage-container">" HAVE NO "</div>" !!!';
+        curr.completedStatus.fixCheerioAddCloseDiv.message = 'ERR0R: "<div class="definitions-container">" AND "<div class="passage-container">" HAVE NO "</div>" !!!';
     }
     if (curr.passagetext.includes('</link>')){
         curr.passagetext = curr.passagetext.replace(/<\/link>/g, '');
         curr.completedStatus.fixCheerioRemoveCloseLink.status = true;
     } else {
         curr.completedStatus.fixCheerioRemoveCloseLink.status = false;
-        curr.completedStatus.fixCheerioRemoveCloseLink.message = 'Couldn\'t find any </link> to remove!';
+        curr.completedStatus.fixCheerioRemoveCloseLink.message = 'WARNING: Couldn\'t find any </link> to remove!';
     }
 };
 
@@ -224,7 +245,7 @@ var editPassageText = function (acc, curr) {
     } catch (err) {
         errorBody += acc.options.currentFile + '\n' + err;
         curr.completedStatus.cheerioCanReadPassage.status = false;
-        curr.completedStatus.cheerioCanReadPassage.message = 'FATAL!!! : Cheerio was unable to edit the passagetext\'s HTML (Did it have any?)!';
+        curr.completedStatus.cheerioCanReadPassage.message = 'FATAL ERR0R: Cheerio was unable to edit the passagetext\'s HTML (Did it have any?)!';
         delete curr.completedStatus.passageDelete;
         delete curr.completedStatus.passageClass;
         delete curr.completedStatus.passageDivDefinition;
@@ -314,17 +335,17 @@ var everyRowPassed = function (reducedCSV) {
 var appendErrorLog = function (reducedCSV, allPassed) {
     // Override completedStatus of reducedCSV to filter which items make it onto the error log. (Any Non-Commented Lines Will effect every row on every file).
     reducedCSV.forEach(function (row) {
-        // try{row.completedStatus.updateCanDo.status = true;}catch(e){}               // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        // try{row.completedStatus.splitField.status = true;}catch(e){}                // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        // try{row.completedStatus.keyRename.status = true;}catch(e){}                 // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        // try{row.completedStatus.cheerioCanReadPassage.status = true;}catch(e){}     // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        try{row.completedStatus.updateCanDo.status = true;}catch(e){}               // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        try{row.completedStatus.splitField.status = true;}catch(e){}                // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        try{row.completedStatus.keyRename.status = true;}catch(e){}                 // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        try{row.completedStatus.cheerioCanReadPassage.status = true;}catch(e){}     // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         // try{row.completedStatus.passageDelete.status = true;}catch(e){}             // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        // try{row.completedStatus.passageClass.status = true;}catch(e){}              // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        // try{row.completedStatus.passageDivDefinition.status =true;}catch(e){}       // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        // try{row.completedStatus.passageDivPassage.status = true;}catch(e){}         // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        // try{row.completedStatus.fixCheerioAddCloseDiv.status = true;}catch(e){}     // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        // try{row.completedStatus.fixCheerioRemoveCloseLink.status = true;}catch(e){} // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        // row.everyTaskSuccessful = Object.keys(row.completedStatus).every(function (task) {return row.completedStatus[task].status;});
+        try{row.completedStatus.passageClass.status = true;}catch(e){}              // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        try{row.completedStatus.passageDivDefinition.status = true;}catch(e){}      // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        try{row.completedStatus.passageDivPassage.status = true;}catch(e){}         // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        try{row.completedStatus.fixCheerioAddCloseDiv.status = true;}catch(e){}     // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        try{row.completedStatus.fixCheerioRemoveCloseLink.status = true;}catch(e){} // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        row.everyTaskSuccessful = Object.keys(row.completedStatus).every(function (task) {return row.completedStatus[task].status;});
         // row.everyTaskSuccessful = true; 
     });
     allPassed = everyRowPassed(reducedCSV);
@@ -341,7 +362,7 @@ var appendErrorLog = function (reducedCSV, allPassed) {
                         } else if (false/* row.passagename !== undefined && row.questionname !== undefined */) {
                             errorBody += 'At ' + row.passagename + ', ' + row.questionname + ', task: "' + task.padEnd(25, ' ') + '": ' + row.completedStatus[task].message + '\n\t';
                         } else {
-                            errorBody += ('At Row ' + (rowIndex+2).toString().padStart(2, '0') + ', task: "' + task).padEnd(45, ' ') + '": ' + row.completedStatus[task].message + '\n\t';
+                            errorBody += ('At Row ' + (rowIndex+2).toString().padStart(2, '0') + ', task: "' + task).padEnd(45, ' ') + '": ' + row.completedStatus[task].message + '\n\t' + row.passagetext + '\n\t';
                         }
                     }
                 });
@@ -372,8 +393,8 @@ var writeFile = function (outputDirectory, outputName, dataToOutput) {
  *********************************************************************/
 function main() {
     var outputDirectory = '';
-    // const targetFiles = getTargetFiles(targetDirectory); // Get Array of Files to Cycle Through
-    const targetFiles = ['FP_L1_DE_T10_POC4_V1_CSS.csv', 'FP_R1_DE_T8_POC4_V1_CSS.csv', 'FP_S1_AS_T11_POC4_V1_CSS.csv', 'FP_W1_AS_T10_POC4_V1_CSS.csv'];
+    const targetFiles = getTargetFiles(targetDirectory); // Get Array of Files to Cycle Through
+    // const targetFiles = ['FP_L1_DE_T10_POC4_V1_CSS.csv', 'FP_R1_DE_T8_POC4_V1_CSS.csv', 'FP_S1_AS_T11_POC4_V1_CSS.csv', 'FP_W1_AS_T10_POC4_V1_CSS.csv'];
     // const targetFiles = ['FP_L1_DE_T11_POC4_V1_CSS.csv','FP_R1_NA_T8_POC4_V1_CSS.csv','FP_S1_NA_T9_POC4_V1_CSS.csv','FP_W1_NE_T5_POC4_V1_CSS.csv']; // for testing
     var csvrOptions = { // Set Options:
         headersOut: [
@@ -398,7 +419,7 @@ function main() {
         appendErrorLog(reducedCSV, allPassed); // Write Errors from each row to error log
         if (allPassed) outputDirectory = od_noErrors; // Determine whether file-output should go to >>
         else outputDirectory = od_foundErrors;        // error or no-error folder.
-        // outputDirectory = od_noErrors // Uncomment this line if you want all files to go to the same place
+        outputDirectory = od_noErrors; // Uncomment this line if you want all files to go to the same place
         // TODO Create a Function that will Take Each File Name and Change it to the new Naming Format.
         // writeFile(outputDirectory, file, csvOutput); // Write the File
         var outputLocation = outputDirectory + Date.now() + '_' + file;
