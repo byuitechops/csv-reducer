@@ -116,20 +116,104 @@ var deleteKeys = function (acc, curr) {
 };
 
 /********************************************************************
+ * Edit passagetext: setGlobalSelectors
+ * 
+ * NOTE:    
+ * USE:     
+ * RETURNS: 
+ *********************************************************************/
+var setGlobalSelectors = function (acc, curr, arrIndex, $, gs) {
+    // Finding <h1>Instructions</h1> and exceptions
+    gs.instructions.exists = false;
+    gs.instructions.object = new Object();
+    gs.instructions.set = () => {
+        var findInstructions = $('h1').add('h2').add('h3').filter((index, ele) => {
+            if ($(ele).text().toLowerCase().includes('in' /*struction'*/ )) {
+                gs.instructions.exists = true;
+                return $(ele);
+            }
+        }).first();
+        gs.instructions = findInstructions;
+        return findInstructions;
+    };
+    gs.instructions.set();
+
+    // Finding <h2>Warm-up</h2> and exceptions
+    gs.warmup.exists = false;
+    gs.warmup.object = new Object();
+    gs.warmup.set = () => {
+        var findWarmup = $('h2').filter((index, ele) => {
+            if ($(ele).text().toLowerCase().includes('wa' /*rm'*/ )) {
+                gs.warmup.exists = true;
+                return $(ele);
+            }
+        }).first();
+        gs.warmup.object = findWarmup;
+        return findWarmup; 
+    };
+    gs.warmup.set();
+
+    // Finding <h2>Passage</h2> and exceptions
+    gs.passage.exists = false;
+    gs.passage.object = new Object();
+    gs.passage.set = () => {
+        var findPassage = $('h2').filter((index, ele) => {
+            if ($(ele).text().toLowerCase().includes('pas' /*sage'*/ )) {
+                gs.passage.exists = true;
+                return $(ele);
+            }
+        }).first();
+        gs.passage.object = findPassage;
+        return findPassage; 
+    };
+    gs.passage.set();
+
+    // Finding <h2>Definitions</h2>
+    gs.definitions.exists = false;
+    gs.definitions.object = new Object();
+    gs.definitions.set = () => {
+        var findDefinitions = $('h2').filter((index, ele) => {
+            if ($(ele).text().toLowerCase().includes('def' /*inition'*/ )) {
+                gs.definitions.exists = true;
+                return $(ele);
+            }
+        }).first();
+        gs.definitions.object = findDefinitions;
+        return findDefinitions;
+    };
+    gs.definitions.set();
+
+    // Finding and Printing Exceptions
+    // $('h1').add('h2').add('h3').filter((index, ele) => {
+    //     if ($(ele).text().toLowerCase().includes('instructions') && ele.name === 'h1' || $(ele).text().toLowerCase().includes('warm-up') && ele.name === 'h2' || $(ele).text().toLowerCase().includes('passage') && ele.name === 'h2') {
+    //         return $(ele);
+    //     } else if ($(ele).text().toLowerCase().includes('instruction') && (ele.name === 'h2' || ele.name === 'h3')) {
+    //         console.log(`${acc.options.currentFile}|row ${arrIndex + 2}|${ele.name}|${$(ele).text()}|${curr.passagetext}`);
+    //     } else if ($(ele).text().toLowerCase().includes('in') && (ele.name === 'h2' || ele.name === 'h1') /*&&  !$(ele).text().toLowerCase().includes('bene') */ ) {
+    //         console.log(`${acc.options.currentFile}|row ${arrIndex + 2}|${ele.name}|${$(ele).text()}|${curr.passagetext}`);
+    //     } else if (($(ele).text().toLowerCase().includes('warm') || $(ele).text().toLowerCase().includes('wam')) && (ele.name === 'h1' || ele.name === 'h2' || ele.name === 'h3') /* && !$(ele).text().toLowerCase().includes('ing') */ ) {
+    //         console.log(`${acc.options.currentFile}|row ${arrIndex + 2}|${ele.name}|${$(ele).text()}|${curr.passagetext}`);
+    //     } else if ($(ele).text().toLowerCase().includes('pas') && (ele.name === 'h1' || ele.name === 'h2' || ele.name === 'h3')) {
+    //         console.log(`${acc.options.currentFile}|row ${arrIndex + 2}|${ele.name}|${$(ele).text()}|${curr.passagetext}`);
+    //     } else {
+    //         // console.log(`${acc.options.currentFile}|${ele.name}|row ${arrIndex+2}|${$(ele).text()}`);
+    //     }
+    // }).first();
+};
+
+/********************************************************************
  * Edit passagetext: removeText
  * 
  * USE:     in reduce function. Needs accumulator, current item, and
  *          cheerio object
  * RETURNS: void
  *********************************************************************/
-var replaceText = function (acc, curr, arrIndex, $) {
+var replaceText = function (acc, curr, arrIndex, $, gs) {
     var iExists = false;
     var instructions = $('h1').add('h2').add('h3').filter((index, ele) => {
-        if ($(ele).text().toLowerCase().includes('in' /*ruction'*/) || $(ele).text().toLowerCase().includes('pas' /*sage'*/) && ele.name === 'h1') {
+        if ($(ele).text().toLowerCase().includes('in' /*struction'*/) || $(ele).text().toLowerCase().includes('pas' /*sage'*/) && ele.name === 'h1') {
             iExists = true;
             return $(ele);
-        } else if (!$(ele).text().toLowerCase().includes('pas'/*sage'*/) && !$(ele).text().toLowerCase().includes('wa'/*rm'*/)) {
-            // console.log(`${acc.options.currentFile}|h1|row ${arrIndex+2}|${$(ele).text()}`);
         }
     }).first();
     var wExists = false;
@@ -138,8 +222,6 @@ var replaceText = function (acc, curr, arrIndex, $) {
         if ($(ele).text().toLowerCase().includes('wa'/*rm'*/)) {
             wExists = true;
             return $(ele);
-        } else if (!$(ele).text().toLowerCase().includes('pas'/*sage'*/) && !$(ele).text().toLowerCase().includes('inst'/*ruction'*/)) {
-            // console.log(`${acc.options.currentFile}|h2|row ${arrIndex+2}|${$(ele).text()}`);
         }
     }).first();
     var pExists = false;
@@ -184,7 +266,7 @@ var replaceText = function (acc, curr, arrIndex, $) {
  *          cheerio object
  * RETURNS: void
  *********************************************************************/
-var addClassDefinitions = function (acc, curr, $) {
+var addClassDefinitions = function (acc, curr, arrIndex, $, gs) {
     // Gets all the <p><strong> combinations between the first h2 tag and the next one.
     if ($('h2').first().text().toLowerCase() === 'definitions' && $('h2').last().text().toLowerCase() === 'passage') {
         var pstrong = $('h2').first().nextUntil('h2').filter('p').has('strong');
@@ -213,7 +295,7 @@ var addClassDefinitions = function (acc, curr, $) {
  *          cheerio object
  * RETURNS: void
  *********************************************************************/
-var addDivsAround = function (acc, curr, $) {
+var addDivsAround = function (acc, curr, arrIndex, $, gs) {
     // console.dir($('h2').first().text().toLowerCase());
     if ($('h2').first().text().toLowerCase() === 'definitions') {
         $('h2').first().nextUntil('h2').add($('h2').first()).first().before($('<div class="definitions-container">'));
@@ -266,9 +348,11 @@ var fixCheerio = function (acc, curr) {
 var editPassageText = function (acc, curr, arrIndex) {
     try {
         var $ = cheerio.load(curr.passagetext, {xmlMode: true}); // Declare Cheerio Object
-        replaceText(acc, curr, arrIndex, $); // "Passage Content to Delete" Section
-        addClassDefinitions(acc, curr, $); // "Adding Class Definitions"
-        addDivsAround(acc, curr, $); // "Add Divs" Section
+        var gs = new Object();
+        setGlobalSelectors(acc, curr, arrIndex, $, gs);
+        replaceText(acc, curr, arrIndex, $, gs); // "Passage Content to Delete" Section
+        addClassDefinitions(acc, curr, arrIndex, $, gs); // "Adding Class Definitions"
+        addDivsAround(acc, curr, arrIndex, $, gs); // "Add Divs" Section
         curr.passagetext = $.html();
         fixCheerio(acc, curr);
         curr.completedStatus.cheerioCanReadPassage.status = true;
@@ -331,7 +415,6 @@ var reducer = function (acc, curr, i) {
             message: 'Default Message'
         }
     };
-    
     updateQuestionCanDo(acc, curr);
     deleteKeys(acc, curr);
     splitQuestionName(acc, curr);
@@ -394,7 +477,7 @@ var appendErrorLog = function (reducedCSV, allPassed) {
                         } else if (false/* row.passagename !== undefined && row.questionname !== undefined */) {
                             errorBody += 'At ' + row.passagename + ', ' + row.questionname + ', task: "' + task.padEnd(25, ' ') + '": ' + row.completedStatus[task].message + '\n\t';
                         } else {
-                            errorBody += ('At Row ' + (rowIndex+2).toString().padStart(2, '0') + ', task: "' + task).padEnd(45, ' ') + '": ' + row.completedStatus[task].message + '\n' + row.passagetext + '\n\t';
+                            errorBody += ('At Row ' + (rowIndex+2).toString().padStart(2, '0') + ', task: "' + task).padEnd(45, ' ') + '": ' + row.completedStatus[task].message /* + '\n' + row.passagetext */ + '\n\t';
                         }
                     }
                 });
