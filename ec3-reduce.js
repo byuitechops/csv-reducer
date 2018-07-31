@@ -123,42 +123,52 @@ var deleteKeys = function (acc, curr) {
  * RETURNS: void
  *********************************************************************/
 var replaceText = function (acc, curr, arrIndex, $) {
-    var instructions = $('h1')/* .add('h2') */.filter((index, ele) => {
-        if ($(ele).text().toLowerCase().includes('instruction')) {
+    var iExists = false;
+    var instructions = $('h1').add('h2').add('h3').filter((index, ele) => {
+        if ($(ele).text().toLowerCase().includes('in' /*ruction'*/) || $(ele).text().toLowerCase().includes('pas' /*sage'*/) && $(ele).name === 'h1') {
+            iExists = true;
             return $(ele);
-        } else if (!$(ele).text().toLowerCase().includes('passage') && !$(ele).text().toLowerCase().includes('warm')) {
+        } else if (!$(ele).text().toLowerCase().includes('pas'/*sage'*/) && !$(ele).text().toLowerCase().includes('wa'/*rm'*/)) {
             // console.log(`${acc.options.currentFile}|h1|row ${arrIndex+2}|${$(ele).text()}`);
         }
     }).first();
+    var wExists = false;
     var warmup = $('h2').filter((index, ele) => {
         // console.log($(ele).text());
-        if ($(ele).text().toLowerCase().includes('warm')) {
+        if ($(ele).text().toLowerCase().includes('wa'/*rm'*/)) {
+            wExists = true;
             return $(ele);
-        } else if (!$(ele).text().toLowerCase().includes('passage') && !$(ele).text().toLowerCase().includes('instruction')) {
+        } else if (!$(ele).text().toLowerCase().includes('pas'/*sage'*/) && !$(ele).text().toLowerCase().includes('inst'/*ruction'*/)) {
             // console.log(`${acc.options.currentFile}|h2|row ${arrIndex+2}|${$(ele).text()}`);
         }
     }).first();
+    var pExists = false;
     var passage = $('h2').filter((index, ele) => {
-        if ($(ele).text().toLowerCase().includes('passage')) return $(ele);
+        if ($(ele).text().toLowerCase().includes('pas'/*sage'*/)) {
+            pExists = true;
+            return $(ele);
+        }
     }).first();
-    // if (!instructions.text().toLowerCase().includes('instructions')) console.log('Instructions Needed');
-    // if (warmup.text().toLowerCase().includes('warm')) console.log(warmup.text());
-    if (instructions.text().toLowerCase().includes('instruction') && warmup.text().toLowerCase().includes('warm')) {
-        // $('h1').first().nextUntil('h2').add($('h1').first()).add($('h2').first().nextUntil('h2').not($('p').has('strong'))).remove('*');
+
+    if (iExists && wExists) {
         instructions.nextUntil(warmup).add(instructions).add(warmup.nextUntil(passage).not($('p').has('strong'))).remove('*');
         warmup.after('<h2>Definitions</h2>');
         warmup.remove();
         curr.completedStatus.passageDelete.status = true;
-    } else if (instructions.text().toLowerCase().includes('instruction') && passage.text().toLowerCase().includes('passage')) {
+    } else if (iExists && pExists) {
         instructions.nextUntil(passage).add(instructions).not($('p').has('strong')).remove('*');
         $('p').has('strong').first().before('<h2>Definitions</h2>');
         curr.completedStatus.passageDelete.status = true;
         curr.completedStatus.passageDelete.message = 'NOTE: first h2 tag is <h2>Passage</h2>';
+    } else if (iExists & !wExists && !pExists) {
+        curr.completedStatus.passageDelete.status = true;
+        curr.completedStatus.passageDelete.message = 'NOTE: Instructions exist, but warm-up and passage do not. Assumming passage is in questiontextfield';
+        instructions.nextAll().add(instructions).remove('*');
     } else {
         curr.completedStatus.passageDelete.status = false;
-        if (!instructions.text().toLowerCase().includes('instructions') && warmup.text().toLowerCase().includes('warm')) {
+        if (!instructions.text().toLowerCase().includes('instructions') && warmup.text().toLowerCase().includes('wa'/*rm'*/)) {
             curr.completedStatus.passageDelete.message = 'ERR0R: Couldn\'t find "<h1>Instructions</h1>!" (replaceText Function)';
-        } else if (instructions.text().toLowerCase().includes('instructions') && !warmup.text().toLowerCase().includes('warm')) {
+        } else if (instructions.text().toLowerCase().includes('instructions') && !warmup.text().toLowerCase().includes('wa'/*rm'*/)) {
             curr.completedStatus.passageDelete.message = 'ERR0R: Couldn\'t find "<h2>Warm-up</h2>!" (replaceText Function)';
         } else {
             curr.completedStatus.passageDelete.message = 'ERR0R: Couldn\'t find both "<h1>Instructions</h1>" and "<h2>Warm-up</h2>!" (replaceText Function)';
@@ -381,7 +391,7 @@ var appendErrorLog = function (reducedCSV, allPassed) {
                         } else if (false/* row.passagename !== undefined && row.questionname !== undefined */) {
                             errorBody += 'At ' + row.passagename + ', ' + row.questionname + ', task: "' + task.padEnd(25, ' ') + '": ' + row.completedStatus[task].message + '\n\t';
                         } else {
-                            errorBody += ('At Row ' + (rowIndex+2).toString().padStart(2, '0') + ', task: "' + task).padEnd(45, ' ') + '": ' + row.completedStatus[task].message + '\n\t' + row.passagetext + '\n\t';
+                            errorBody += ('At Row ' + (rowIndex+2).toString().padStart(2, '0') + ', task: "' + task).padEnd(45, ' ') + '": ' + row.completedStatus[task].message + '\n' + row.passagetext + '\n\t';
                         }
                     }
                 });
