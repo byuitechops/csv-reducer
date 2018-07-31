@@ -123,9 +123,9 @@ var deleteKeys = function (acc, curr) {
  * RETURNS: void
  *********************************************************************/
 var replaceText = function (acc, curr, arrIndex, $) {
-    var iExists = false; 
+    var iExists = false;
     var instructions = $('h1').add('h2').add('h3').filter((index, ele) => {
-        if ($(ele).text().toLowerCase().includes('in' /*ruction'*/) || $(ele).text().toLowerCase().includes('pas' /*sage'*/) && $(ele).name === 'h1') {
+        if ($(ele).text().toLowerCase().includes('in' /*ruction'*/) || $(ele).text().toLowerCase().includes('pas' /*sage'*/) && ele.name === 'h1') {
             iExists = true;
             return $(ele);
         } else if (!$(ele).text().toLowerCase().includes('pas'/*sage'*/) && !$(ele).text().toLowerCase().includes('wa'/*rm'*/)) {
