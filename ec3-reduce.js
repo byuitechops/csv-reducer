@@ -53,16 +53,16 @@ var shouldUpdateCando = function (filename) {
 var updateQuestionCanDo = function (acc, curr) {
     if (curr.questioncando !== undefined && acc.options.updateCanDoField) {
         if (curr.questioncando === 'f9') { // and file is for read or write,
-            console.log('Updating f9 to f10!');
+            // console.log('Updating f9 to f10!');
             curr.questioncando = 'f10'; // f9 to f10
         } else if (curr.questioncando === 'f10') {
-            console.log('Updating f10 to f11!');
+            // console.log('Updating f10 to f11!');
             curr.questioncando = 'f11'; // f10 to f11
         } else if (curr.questioncando === 'f11') {
-            console.log('Updating f11 to f9!');
+            // console.log('Updating f11 to f9!');
             curr.questioncando = 'f9'; // f11 to f9
         } else if (curr.questioncando === 'f31') {
-            console.log('Updating f31 to f30!');
+            // console.log('Updating f31 to f30!');
             curr.questioncando = 'f30'; // f31 to f30
         }
         curr.completedStatus.updateCanDo.status = true;
@@ -122,26 +122,50 @@ var deleteKeys = function (acc, curr) {
  *          cheerio object
  * RETURNS: void
  *********************************************************************/
-var replaceText = function (acc, curr, $) {
-    var fh1 = $('h1').first().text().toLowerCase();
-    var fh2 = $('h2').first().text().toLowerCase();
-    var lh2 = $('h2').last().text().toLowerCase();
-    if (fh1 === 'instructions' && fh2 === 'warm-up') {
+var replaceText = function (acc, curr, arrIndex, $) {
+    var instructions = $('h1')/* .add('h2') */.filter((index, ele) => {
+        if ($(ele).text().toLowerCase().includes('instruction')) {
+            return $(ele);
+        } else if (!$(ele).text().toLowerCase().includes('passage') && !$(ele).text().toLowerCase().includes('warm')) {
+            // console.log(`${acc.options.currentFile}|h1|row ${arrIndex+2}|${$(ele).text()}`);
+        }
+    }).first();
+    var warmup = $('h2').filter((index, ele) => {
+        // console.log($(ele).text());
+        if ($(ele).text().toLowerCase().includes('warm')) {
+            return $(ele);
+        } else if (!$(ele).text().toLowerCase().includes('passage') && !$(ele).text().toLowerCase().includes('instruction')) {
+            // console.log(`${acc.options.currentFile}|h2|row ${arrIndex+2}|${$(ele).text()}`);
+        }
+    }).first();
+    var passage = $('h2').filter((index, ele) => {
+        if ($(ele).text().toLowerCase().includes('passage')) return $(ele);
+    }).first();
+    // if (!instructions.text().toLowerCase().includes('instructions')) console.log('Instructions Needed');
+    // if (warmup.text().toLowerCase().includes('warm')) console.log(warmup.text());
+    if (instructions.text().toLowerCase().includes('instruction') && warmup.text().toLowerCase().includes('warm')) {
+        $('h1').first().nextUntil('h2').add($('h1').first()).add($('h2').first().nextUntil('h2').not($('p').has('strong'))).remove('*');
         $('h1').first().nextUntil('h2').add($('h1').first()).add($('h2').first().nextUntil('h2').not($('p').has('strong'))).remove('*');
         $('h2').first().after('<h2>Definitions</h2>');
         $('h2').first().remove();
         curr.completedStatus.passageDelete.status = true;
-    } else if (fh1 === 'instructions' && fh2 === 'passage') {
-        console.log(acc.options.currentFile + ' --- first h2 tag is <h2>Passage</h2>');
+    } else if (instructions.text().toLowerCase().includes('instruction') && passage.text().toLowerCase().includes('passage')) {
+        // console.log(acc.options.currentFile + ' --- first h2 tag is <h2>Passage</h2>');
         $('h1').first().nextUntil('h2').add($('h1').first()).not($('p').has('strong')).remove('*');
         $('p').has('strong').first().before('<h2>Definitions</h2>');
         curr.completedStatus.passageDelete.status = true;
         curr.completedStatus.passageDelete.message = 'NOTE: first h2 tag is <h2>Passage</h2>';
+    // } else if (fh2 === 'instructions' && $('h2').first().next('h2').text().toLowerCase() === 'warm-up') {
+    //     console.log(acc.options.currentFile + ' --- I FOUND IT! <h2>Instructions</h2> FOLLOWED WITH <h2>Warm-up</h2>!!!');
+    // } else if () {
+
+    // } else if () {
+
     } else {
         curr.completedStatus.passageDelete.status = false;
-        if (fh1 !== 'instructions' && fh2 === 'warm-up') {
+        if (!instructions.text().toLowerCase().includes('instructions') && warmup.text().toLowerCase().includes('warm')) {
             curr.completedStatus.passageDelete.message = 'ERR0R: Couldn\'t find "<h1>Instructions</h1>!" (replaceText Function)';
-        } else if ($('h2').first().text().toLowerCase() !== 'warm-up' && $('h1').first().text().toLowerCase() === 'instructions') {
+        } else if (instructions.text().toLowerCase().includes('instructions') && !warmup.text().toLowerCase().includes('warm')) {
             curr.completedStatus.passageDelete.message = 'ERR0R: Couldn\'t find "<h2>Warm-up</h2>!" (replaceText Function)';
         } else {
             curr.completedStatus.passageDelete.message = 'ERR0R: Couldn\'t find both "<h1>Instructions</h1>" and "<h2>Warm-up</h2>!" (replaceText Function)';
@@ -233,10 +257,10 @@ var fixCheerio = function (acc, curr) {
 /********************************************************************
  * Edit passagetext
  *********************************************************************/
-var editPassageText = function (acc, curr) {
+var editPassageText = function (acc, curr, arrIndex) {
     try {
         var $ = cheerio.load(curr.passagetext, {xmlMode: true}); // Declare Cheerio Object
-        replaceText(acc, curr, $); // "Passage Content to Delete" Section
+        replaceText(acc, curr, arrIndex, $); // "Passage Content to Delete" Section
         addClassDefinitions(acc, curr, $); // "Adding Class Definitions"
         addDivsAround(acc, curr, $); // "Add Divs" Section
         curr.passagetext = $.html();
@@ -301,16 +325,18 @@ var reducer = function (acc, curr, i) {
             message: 'Default Message'
         }
     };
+    
     updateQuestionCanDo(acc, curr);
     deleteKeys(acc, curr);
     splitQuestionName(acc, curr);
     // TODO Add Change-Difficulty-Level Function Here
-    editPassageText(acc, curr);
+    editPassageText(acc, curr, i);
     curr.everyTaskSuccessful = Object.keys(curr.completedStatus).every(function(task){
         return curr.completedStatus[task].status;
     });
     // curr.thisFileNameIs = acc.options.currentFile;
     acc.push(curr);
+    acc.options.counter++;
     return acc;
 };
 
@@ -405,7 +431,7 @@ function main() {
             'answertext3', 'answertext4', 'answertext5', 'answertext6'
         ],
         initAcc: [],
-        updateCanDoField: false
+        updateCanDoField: false,
     };
     // cycle through each file
     var readEditWrite = function (file, callback) {
