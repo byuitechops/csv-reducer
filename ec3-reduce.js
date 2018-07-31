@@ -144,23 +144,16 @@ var replaceText = function (acc, curr, arrIndex, $) {
     // if (!instructions.text().toLowerCase().includes('instructions')) console.log('Instructions Needed');
     // if (warmup.text().toLowerCase().includes('warm')) console.log(warmup.text());
     if (instructions.text().toLowerCase().includes('instruction') && warmup.text().toLowerCase().includes('warm')) {
-        $('h1').first().nextUntil('h2').add($('h1').first()).add($('h2').first().nextUntil('h2').not($('p').has('strong'))).remove('*');
-        $('h1').first().nextUntil('h2').add($('h1').first()).add($('h2').first().nextUntil('h2').not($('p').has('strong'))).remove('*');
-        $('h2').first().after('<h2>Definitions</h2>');
-        $('h2').first().remove();
+        // $('h1').first().nextUntil('h2').add($('h1').first()).add($('h2').first().nextUntil('h2').not($('p').has('strong'))).remove('*');
+        instructions.nextUntil(warmup).add(instructions).add(warmup.nextUntil(passage).not($('p').has('strong'))).remove('*');
+        warmup.after('<h2>Definitions</h2>');
+        warmup.remove();
         curr.completedStatus.passageDelete.status = true;
     } else if (instructions.text().toLowerCase().includes('instruction') && passage.text().toLowerCase().includes('passage')) {
-        // console.log(acc.options.currentFile + ' --- first h2 tag is <h2>Passage</h2>');
-        $('h1').first().nextUntil('h2').add($('h1').first()).not($('p').has('strong')).remove('*');
+        instructions.nextUntil(passage).add(instructions).not($('p').has('strong')).remove('*');
         $('p').has('strong').first().before('<h2>Definitions</h2>');
         curr.completedStatus.passageDelete.status = true;
         curr.completedStatus.passageDelete.message = 'NOTE: first h2 tag is <h2>Passage</h2>';
-    // } else if (fh2 === 'instructions' && $('h2').first().next('h2').text().toLowerCase() === 'warm-up') {
-    //     console.log(acc.options.currentFile + ' --- I FOUND IT! <h2>Instructions</h2> FOLLOWED WITH <h2>Warm-up</h2>!!!');
-    // } else if () {
-
-    // } else if () {
-
     } else {
         curr.completedStatus.passageDelete.status = false;
         if (!instructions.text().toLowerCase().includes('instructions') && warmup.text().toLowerCase().includes('warm')) {
