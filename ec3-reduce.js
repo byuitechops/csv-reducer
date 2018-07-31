@@ -176,6 +176,7 @@ var replaceText = function (acc, curr, arrIndex, $) {
     }
 };
 
+// TODO Redo this function to use selectors like replaceText() does.
 /********************************************************************
  * Edit passagetext: addClassDefinitions
  *
@@ -204,6 +205,7 @@ var addClassDefinitions = function (acc, curr, $) {
     }
 };
 
+// TODO Redo this function to use selectors like replaceText() does.
 /********************************************************************
  * Edit passagetext: addDivsAround
  *
@@ -230,6 +232,7 @@ var addDivsAround = function (acc, curr, $) {
         curr.completedStatus.passageDivPassage.message = 'ERR0R: Couldn\'t find "<h2>Passage</h2>" (addDivsAround Function)';
     }
 };
+
 /********************************************************************
  * Edit passagetext: Fix Cheerio
  * DESCRIPTION: Cheerio thinks its so smart and needs to add stuff we
