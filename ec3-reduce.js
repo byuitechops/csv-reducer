@@ -2,7 +2,6 @@
  * Declare Dependancies
  *********************************************************************/
 const fs = require('fs');
-// const path = require('path');
 const csvr = require('./main.js');
 const cheerio = require('cheerio');
 const asynclib = require('async');
@@ -11,14 +10,9 @@ var errorHeader = '\nThe Following Files Had One or More Error:\n';
 var errorBody = '\n';
 var uniqueString = '<div class="addclosingdiv">heylookherethisisasentancethatwillhopefullyneverappearinanyfilefromheretotherestofforeverinanyec3courseyay</div>';
 
-const targetDirectory = './csv-tests/ec3/ec3-production/ec3-csvs-originals/'; // for production
+const targetDirectory = './csv-tests/ec3/ec3-production/ec3-csvs-originals/R/'; // for production
 var od_noErrors = './csv-tests/ec3/ec3-production/ec3-csvs-outputs/ec3-csvs-no-errors/'; // for production
 var od_foundErrors = './csv-tests/ec3/ec3-production/ec3-csvs-outputs/ec3-csvs-found-errors/'; // for production
-// const targetFiles = getTargetFiles(targetDirectory);
-// const targetDirectory = './csv-tests/ec3/ec3-testing/ec3-test-originals/'; // for testing
-// var od_noErrors = './csv-tests/ec3/ec3-testing/ec3-test-outputs/ec3-test-csvs-no-errors/'; // for testing
-// var od_foundErrors = './csv-tests/ec3/ec3-testing/ec3-test-outputs/ec3-test-csvs-found-errors/'; // for testing
-// const targetFiles = ['FP_L1_DE_T11_POC4_V1_CSS.csv','FP_R1_NA_T8_POC4_V1_CSS.csv','FP_S1_NA_T9_POC4_V1_CSS.csv','FP_W1_NE_T5_POC4_V1_CSS.csv']; // for testing
 
 /********************************************************************
  * read in a list of files to 
@@ -122,6 +116,7 @@ var deleteKeys = function (acc, curr) {
  * USE:     
  * RETURNS: 
  *********************************************************************/
+var counter = 0;
 var setGlobalSelectors = function (acc, curr, arrIndex, $) {
     var gs = {
         instructions: {
@@ -145,11 +140,17 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $) {
             set: () => {}
         }
     };
+
     // Finding <h1>Instructions</h1> and exceptions
     gs.instructions.set = () => {
         gs.instructions.exists = false;
-        var findInstructions = $('h1').add('h2').add('h3').filter((index, ele) => {
-            if ($(ele).text().toLowerCase().includes('in' /*struction'*/ )) {
+        var findInstructions = new Object();
+        findInstructions = $('h1').add('h2').add('h3').filter((index, ele) => {
+            if ($(ele).text().toLowerCase().includes('instruction')) {
+                gs.instructions.exists = true;
+                return $(ele);
+            } else if ($(ele).text().toLowerCase().includes('in') && ele.name === 'h1') {
+                // console.log($(ele).html()); // uncomment if you want to see the non-strict captures.
                 gs.instructions.exists = true;
                 return $(ele);
             }
@@ -158,6 +159,7 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $) {
         return findInstructions;
     };
     gs.instructions.set();
+    // if (!gs.instructions.exists) {console.log(`${gs.instructions.exists} + ${counter++} + ${acc.options.currentFile} + row ${arrIndex+2}`);}
     
     // Finding <h2>Warm-up</h2> and exceptions
     gs.warmup.set = () => {
@@ -174,26 +176,32 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $) {
         }
     };
     gs.warmup.set();
-
+    
     // Finding <h2>Passage</h2> and exceptions
     gs.passage.set = () => {
         gs.passage.exists = false;
-        var findPassage = $('h2').filter((index, ele) => {
-            if ($(ele).text().toLowerCase().includes('passage')) {
+        var findPassage = $('h2').add('h3').filter((index, ele) => {
+            if ($(ele).text() === 'Passage') {
+                gs.passage.exists = true;
+                return $(ele);
+            } else if ($(ele).text().toLowerCase().includes('passage') || $(ele).text().toLowerCase().includes('pasage')) {
+                $(ele).html('Passage'); // fix misspelling
                 gs.passage.exists = true;
                 return $(ele);
             }
         }).first();
         gs.passage.object = findPassage;
-        return findPassage; 
+        return findPassage;  
     };
     gs.passage.set();
+    
 
     // Finding <h2>Definitions</h2>
     gs.definitions.set = () => {
         gs.definitions.exists = false;
         var findDefinitions = $('h2').filter((index, ele) => {
-            if ($(ele).text().toLowerCase().includes('definition' )) {
+            if ($(ele).text().toLowerCase().includes('definition')) {
+                console.log('Definitions Exists');
                 gs.definitions.exists = true;
                 return $(ele);
             }
@@ -203,22 +211,7 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $) {
     };
     gs.definitions.set();
     
-    // Finding and Printing Exceptions
-    // $('h1').add('h2').add('h3').filter((index, ele) => {
-    //     if ($(ele).text().toLowerCase().includes('instructions') && ele.name === 'h1' || $(ele).text().toLowerCase().includes('warm-up') && ele.name === 'h2' || $(ele).text().toLowerCase().includes('passage') && ele.name === 'h2') {
-    //         return $(ele);
-    //     } else if ($(ele).text().toLowerCase().includes('instruction') && (ele.name === 'h2' || ele.name === 'h3')) {
-    //         console.log(`${acc.options.currentFile}|row ${arrIndex + 2}|${ele.name}|${$(ele).text()}|${curr.passagetext}`);
-    //     } else if ($(ele).text().toLowerCase().includes('in') && (ele.name === 'h2' || ele.name === 'h1') /*&&  !$(ele).text().toLowerCase().includes('bene') */ ) {
-    //         console.log(`${acc.options.currentFile}|row ${arrIndex + 2}|${ele.name}|${$(ele).text()}|${curr.passagetext}`);
-    //     } else if (($(ele).text().toLowerCase().includes('warm') || $(ele).text().toLowerCase().includes('wam')) && (ele.name === 'h1' || ele.name === 'h2' || ele.name === 'h3') /* && !$(ele).text().toLowerCase().includes('ing') */ ) {
-    //         console.log(`${acc.options.currentFile}|row ${arrIndex + 2}|${ele.name}|${$(ele).text()}|${curr.passagetext}`);
-    //     } else if ($(ele).text().toLowerCase().includes('pas') && (ele.name === 'h1' || ele.name === 'h2' || ele.name === 'h3')) {
-    //         console.log(`${acc.options.currentFile}|row ${arrIndex + 2}|${ele.name}|${$(ele).text()}|${curr.passagetext}`);
-    //     } else {
-    //         // console.log(`${acc.options.currentFile}|${ele.name}|row ${arrIndex+2}|${$(ele).text()}`);
-    //     }
-    // }).first();
+
     return gs;
 };
 
@@ -248,14 +241,14 @@ var replaceText = function (acc, curr, arrIndex, $, gs) {
         curr.completedStatus.passageDelete.status = true;
         curr.completedStatus.passageDelete.message = 'NOTE: first h2 tag is <h2>Passage</h2>';
     } else if (iExists & !wExists && !pExists) {
-        curr.completedStatus.passageDelete.status = true;
-        curr.completedStatus.passageDelete.message = 'NOTE: Instructions exist, but warm-up and passage do not. Assumming passage is in questiontextfield';
+        curr.completedStatus.passageDelete.status = false;
+        curr.completedStatus.passageDelete.message = 'NOTE: Instructions exist, but Warm-up and Passage do not. Ask Ted what to do.';
         instructions.nextAll().add(instructions).remove('*');
     } else {
-        curr.completedStatus.passageDelete.status = false;
-        if (!instructions.text().toLowerCase().includes('instructions') && warmup.text().toLowerCase().includes('wa'/*rm'*/)) {
+        curr.completedStatus.passageDelete.status = true;
+        if (!iExists && wExists) {
             curr.completedStatus.passageDelete.message = 'ERR0R: Couldn\'t find "<h1>Instructions</h1>!" (replaceText Function)';
-        } else if (instructions.text().toLowerCase().includes('instructions') && !warmup.text().toLowerCase().includes('wa'/*rm'*/)) {
+        } else if (iExists && !wExists) {
             curr.completedStatus.passageDelete.message = 'ERR0R: Couldn\'t find "<h2>Warm-up</h2>!" (replaceText Function)';
         } else {
             curr.completedStatus.passageDelete.message = 'ERR0R: Couldn\'t find both "<h1>Instructions</h1>" and "<h2>Warm-up</h2>!" (replaceText Function)';
@@ -273,18 +266,27 @@ var replaceText = function (acc, curr, arrIndex, $, gs) {
  *********************************************************************/
 var addClassDefinitions = function (acc, curr, arrIndex, $, gs) {
     // Gets all the <p><strong> combinations between the first h2 tag and the next one.
-    if ($('h2').first().text().toLowerCase() === 'definitions' && $('h2').last().text().toLowerCase() === 'passage') {
-        var pstrong = $('h2').first().nextUntil('h2').filter('p').has('strong');
-        var pem = $('h2').first().nextUntil('h2').filter('p').has('em');
+    var definitions = gs.instructions.set();
+    var dExists = gs.instructions.exists;
+    var passage = gs.passage.set();
+    var pExists = gs.passage.exists;
+
+    if (!dExists) {
+        // console.log($('h2').first().text());
+    }
+    
+    if (dExists && pExists) {
+        var pstrong = definitions.nextUntil(passage).filter('p').has('strong');
+        var pem = definitions.nextUntil(passage).filter('p').has('em');
         pstrong.addClass('vocab-definition');
         pem.removeClass('vocab-definition');
         pem.addClass('vocab-example');
         curr.completedStatus.passageClass.status = true;
     } else {
         curr.completedStatus.passageClass.status = false;
-        if ($('h2').first().text().toLowerCase() !== 'definitions' && $('h2').last().text().toLowerCase() === 'passage') {
+        if (!dExists && pExists) {
             curr.completedStatus.passageClass.message = 'ERR0R: Couldn\'t find "<h2>Definitions</h2>" (addClassDefinitions Function)';
-        } else if ($('h2').first().text().toLowerCase() === 'definitions' && $('h2').last().text().toLowerCase() !== 'passage') {
+        } else if (dExists && !pExists) {
             curr.completedStatus.passageClass.message = 'ERR0R: Couldn\'t find "<h2>Passage</h2>" (addClassDefinitions Function)';
         } else {
             curr.completedStatus.passageClass.message = 'ERR0R: Couldn\'t find both "<h2>Definitions</h2>" and "<h2>Passage</h2>" (addClassDefinitions Function)';
@@ -301,18 +303,22 @@ var addClassDefinitions = function (acc, curr, arrIndex, $, gs) {
  * RETURNS: void
  *********************************************************************/
 var addDivsAround = function (acc, curr, arrIndex, $, gs) {
-    // console.dir($('h2').first().text().toLowerCase());
-    if ($('h2').first().text().toLowerCase() === 'definitions') {
-        $('h2').first().nextUntil('h2').add($('h2').first()).first().before($('<div class="definitions-container">'));
-        $('h2').first().nextUntil('h2').add($('h2').first()).last().after($(uniqueString));
+    var definitions = gs.instructions.set();
+    var dExists = gs.instructions.exists;
+    var passage = gs.passage.set();
+    var pExists = gs.passage.exists;
+
+    if (dExists) {
+        definitions.before($('<div class="definitions-container">'));
+        definitions.nextUntil(passage).last().after($(uniqueString));
         curr.completedStatus.passageDivDefinition.status = true;
     } else {
         curr.completedStatus.passageDivDefinition.status = false;
         curr.completedStatus.passageDivDefinition.message = 'ERR0R: Couldn\'t find "<h2>Definitions</h2>" (addDivsAround Function)';
     }
-    if ($('h2').last().text().toLowerCase() === 'passage'){
-        $('h2').last().nextAll().add($('h2').last()).first().before($('<div class="passage-container">'));
-        $('h2').last().nextAll().add($('h2').last()).last().after($(uniqueString));
+    if (pExists){
+        passage.before($('<div class="passage-container">'));
+        passage.nextAll().last().after($(uniqueString));
         curr.completedStatus.passageDivPassage.status = true;
     } else {
         curr.completedStatus.passageDivPassage.status = false;
@@ -476,7 +482,7 @@ var appendErrorLog = function (reducedCSV, allPassed) {
             if (!row.everyTaskSuccessful) {
                 Object.keys(row.completedStatus).forEach(function (task) {
                     if (row.completedStatus[task].status === false) {
-                        errorBody += ('At Row ' + (rowIndex+2).toString().padStart(2, '0') + ', task: "' + task).padEnd(45, ' ') + '": ' + row.completedStatus[task].message /* + '\n' + row.passagetext */ + '\n\t';
+                        errorBody += ('At Row ' + (rowIndex+1).toString().padStart(2, '0') + ', task: "' + task).padEnd(45, ' ') + '": ' + row.completedStatus[task].message +/*  '\n' + row.passagetext + */ '\n\t';
                     }
                 });
             }
