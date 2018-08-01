@@ -122,43 +122,64 @@ var deleteKeys = function (acc, curr) {
  * USE:     
  * RETURNS: 
  *********************************************************************/
-var setGlobalSelectors = function (acc, curr, arrIndex, $, gs) {
+var setGlobalSelectors = function (acc, curr, arrIndex, $) {
+    var gs = {
+        instructions: {
+            exists: false,
+            object: new Object(),
+            set: () => {}
+        },
+        warmup: {
+            exists: false,
+            object: new Object(),
+            set: () => {}
+        },
+        passage: {
+            exists: false,
+            object: new Object(),
+            set: () => {}
+        },
+        definitions: {
+            exists: false,
+            object: new Object(),
+            set: () => {}
+        }
+    };
     // Finding <h1>Instructions</h1> and exceptions
-    gs.instructions.exists = false;
-    gs.instructions.object = new Object();
     gs.instructions.set = () => {
+        gs.instructions.exists = false;
         var findInstructions = $('h1').add('h2').add('h3').filter((index, ele) => {
             if ($(ele).text().toLowerCase().includes('in' /*struction'*/ )) {
                 gs.instructions.exists = true;
                 return $(ele);
             }
         }).first();
-        gs.instructions = findInstructions;
+        gs.instructions.object = findInstructions;
         return findInstructions;
     };
     gs.instructions.set();
-
+    
     // Finding <h2>Warm-up</h2> and exceptions
-    gs.warmup.exists = false;
-    gs.warmup.object = new Object();
     gs.warmup.set = () => {
+        gs.warmup.exists = false;
         var findWarmup = $('h2').filter((index, ele) => {
-            if ($(ele).text().toLowerCase().includes('wa' /*rm'*/ )) {
+            if (($(ele).text().toLowerCase().includes('warm') || $(ele).text().toLowerCase().includes('wam')) && $(ele).text().toLowerCase().includes('up')) {
                 gs.warmup.exists = true;
                 return $(ele);
             }
         }).first();
-        gs.warmup.object = findWarmup;
-        return findWarmup; 
+        if (gs.warmup.exists) {
+            gs.warmup.object = findWarmup;
+            return findWarmup; 
+        }
     };
     gs.warmup.set();
 
     // Finding <h2>Passage</h2> and exceptions
-    gs.passage.exists = false;
-    gs.passage.object = new Object();
     gs.passage.set = () => {
+        gs.passage.exists = false;
         var findPassage = $('h2').filter((index, ele) => {
-            if ($(ele).text().toLowerCase().includes('pas' /*sage'*/ )) {
+            if ($(ele).text().toLowerCase().includes('passage')) {
                 gs.passage.exists = true;
                 return $(ele);
             }
@@ -169,11 +190,10 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $, gs) {
     gs.passage.set();
 
     // Finding <h2>Definitions</h2>
-    gs.definitions.exists = false;
-    gs.definitions.object = new Object();
     gs.definitions.set = () => {
+        gs.definitions.exists = false;
         var findDefinitions = $('h2').filter((index, ele) => {
-            if ($(ele).text().toLowerCase().includes('def' /*inition'*/ )) {
+            if ($(ele).text().toLowerCase().includes('definition' )) {
                 gs.definitions.exists = true;
                 return $(ele);
             }
@@ -182,7 +202,7 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $, gs) {
         return findDefinitions;
     };
     gs.definitions.set();
-
+    
     // Finding and Printing Exceptions
     // $('h1').add('h2').add('h3').filter((index, ele) => {
     //     if ($(ele).text().toLowerCase().includes('instructions') && ele.name === 'h1' || $(ele).text().toLowerCase().includes('warm-up') && ele.name === 'h2' || $(ele).text().toLowerCase().includes('passage') && ele.name === 'h2') {
@@ -199,6 +219,7 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $, gs) {
     //         // console.log(`${acc.options.currentFile}|${ele.name}|row ${arrIndex+2}|${$(ele).text()}`);
     //     }
     // }).first();
+    return gs;
 };
 
 /********************************************************************
@@ -209,28 +230,12 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $, gs) {
  * RETURNS: void
  *********************************************************************/
 var replaceText = function (acc, curr, arrIndex, $, gs) {
-    var iExists = false;
-    var instructions = $('h1').add('h2').add('h3').filter((index, ele) => {
-        if ($(ele).text().toLowerCase().includes('in' /*struction'*/) || $(ele).text().toLowerCase().includes('pas' /*sage'*/) && ele.name === 'h1') {
-            iExists = true;
-            return $(ele);
-        }
-    }).first();
-    var wExists = false;
-    var warmup = $('h2').filter((index, ele) => {
-        // console.log($(ele).text());
-        if ($(ele).text().toLowerCase().includes('wa'/*rm'*/)) {
-            wExists = true;
-            return $(ele);
-        }
-    }).first();
-    var pExists = false;
-    var passage = $('h2').filter((index, ele) => {
-        if ($(ele).text().toLowerCase().includes('pas'/*sage'*/)) {
-            pExists = true;
-            return $(ele);
-        }
-    }).first();
+    var instructions = gs.instructions.set();
+    var iExists = gs.instructions.exists;
+    var warmup = gs.warmup.set();
+    var wExists = gs.warmup.exists;
+    var passage = gs.passage.set();
+    var pExists = gs.passage.exists;
 
     if (iExists && wExists) {
         instructions.nextUntil(warmup).add(instructions).add(warmup.nextUntil(passage).not($('p').has('strong'))).remove('*');
@@ -348,8 +353,7 @@ var fixCheerio = function (acc, curr) {
 var editPassageText = function (acc, curr, arrIndex) {
     try {
         var $ = cheerio.load(curr.passagetext, {xmlMode: true}); // Declare Cheerio Object
-        var gs = new Object();
-        setGlobalSelectors(acc, curr, arrIndex, $, gs);
+        var gs = setGlobalSelectors(acc, curr, arrIndex, $);
         replaceText(acc, curr, arrIndex, $, gs); // "Passage Content to Delete" Section
         addClassDefinitions(acc, curr, arrIndex, $, gs); // "Adding Class Definitions"
         addDivsAround(acc, curr, arrIndex, $, gs); // "Add Divs" Section
@@ -357,7 +361,7 @@ var editPassageText = function (acc, curr, arrIndex) {
         fixCheerio(acc, curr);
         curr.completedStatus.cheerioCanReadPassage.status = true;
     } catch (err) {
-        errorBody += acc.options.currentFile + '\n' + err;
+        errorBody += `${acc.options.currentFile} ${arrIndex+2} '\n'${err}\n`;
         curr.completedStatus.cheerioCanReadPassage.status = false;
         curr.completedStatus.cheerioCanReadPassage.message = 'FATAL ERR0R: Cheerio was unable to edit the passagetext\'s HTML (Did it have any?)!';
         delete curr.completedStatus.passageDelete;
@@ -453,13 +457,13 @@ var appendErrorLog = function (reducedCSV, allPassed) {
         try{row.completedStatus.updateCanDo.status = true;}catch(e){}               // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         try{row.completedStatus.splitField.status = true;}catch(e){}                // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         try{row.completedStatus.keyRename.status = true;}catch(e){}                 // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        try{row.completedStatus.cheerioCanReadPassage.status = true;}catch(e){}     // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // try{row.completedStatus.cheerioCanReadPassage.status = true;}catch(e){}     // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         // try{row.completedStatus.passageDelete.status = true;}catch(e){}             // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        try{row.completedStatus.passageClass.status = true;}catch(e){}              // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        try{row.completedStatus.passageDivDefinition.status = true;}catch(e){}      // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        try{row.completedStatus.passageDivPassage.status = true;}catch(e){}         // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        try{row.completedStatus.fixCheerioAddCloseDiv.status = true;}catch(e){}     // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        try{row.completedStatus.fixCheerioRemoveCloseLink.status = true;}catch(e){} // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // try{row.completedStatus.passageClass.status = true;}catch(e){}              // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // try{row.completedStatus.passageDivDefinition.status = true;}catch(e){}      // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // try{row.completedStatus.passageDivPassage.status = true;}catch(e){}         // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // try{row.completedStatus.fixCheerioAddCloseDiv.status = true;}catch(e){}     // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // try{row.completedStatus.fixCheerioRemoveCloseLink.status = true;}catch(e){} // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         row.everyTaskSuccessful = Object.keys(row.completedStatus).every(function (task) {return row.completedStatus[task].status;});
         // row.everyTaskSuccessful = true; 
     });
@@ -472,13 +476,7 @@ var appendErrorLog = function (reducedCSV, allPassed) {
             if (!row.everyTaskSuccessful) {
                 Object.keys(row.completedStatus).forEach(function (task) {
                     if (row.completedStatus[task].status === false) {
-                        if (false/* row.id !== undefined */){
-                            errorBody += 'At ID -- ' + row.id + ' -- '  + 'task: "' + task.padEnd(25, ' ') + '": ' + row.completedStatus[task].message + '\n\t';
-                        } else if (false/* row.passagename !== undefined && row.questionname !== undefined */) {
-                            errorBody += 'At ' + row.passagename + ', ' + row.questionname + ', task: "' + task.padEnd(25, ' ') + '": ' + row.completedStatus[task].message + '\n\t';
-                        } else {
-                            errorBody += ('At Row ' + (rowIndex+2).toString().padStart(2, '0') + ', task: "' + task).padEnd(45, ' ') + '": ' + row.completedStatus[task].message /* + '\n' + row.passagetext */ + '\n\t';
-                        }
+                        errorBody += ('At Row ' + (rowIndex+2).toString().padStart(2, '0') + ', task: "' + task).padEnd(45, ' ') + '": ' + row.completedStatus[task].message /* + '\n' + row.passagetext */ + '\n\t';
                     }
                 });
             }
