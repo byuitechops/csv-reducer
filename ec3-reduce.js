@@ -5,14 +5,19 @@ const fs = require('fs');
 const csvr = require('./main.js');
 const cheerio = require('cheerio');
 const asynclib = require('async');
+const uuidv4 = require('uuid/v4'); 
+const uuidv5 = require('uuid/v5');
+const applicationNS = 'EC_POC';
 var errorDocument = 'The Following Errors Occurred While Parsing the EC3 CSVs On ' + Date() + '\n';
 var errorHeader = '\nThe Following Files Had One or More Error:\n';
 var errorBody = '\n';
 var uniqueString = '<div class="addclosingdiv">heylookherethisisasentancethatwillhopefullyneverappearinanyfilefromheretotherestofforeverinanyec3courseyay</div>';
-
+var uniqueStringForAudioTags = '<uniquetag>ReplaceAudioFileTagHere</uniquetag>';
 const targetDirectory = './csv-tests/ec3/ec3-production/ec3-csvs-originals/R/'; // for production
 var od_noErrors = './csv-tests/ec3/ec3-production/ec3-csvs-outputs/ec3-csvs-no-errors/'; // for production
 var od_foundErrors = './csv-tests/ec3/ec3-production/ec3-csvs-outputs/ec3-csvs-found-errors/'; // for production
+var counter = 0;
+
 
 /********************************************************************
  * read in a list of files to 
@@ -28,6 +33,7 @@ var getTargetFiles = function (targetDirectory) {
     console.log(desiredFilesOnly.length);
     return desiredFilesOnly;
 };
+
 
 /********************************************************************
  * should the questioncando field be updated?
@@ -66,6 +72,32 @@ var updateQuestionCanDo = function (acc, curr) {
         curr.completedStatus.updateCanDo.message = 'WARNING: questioncando field is undefined on this file!';
     } else if (acc.options.updateCanDoField === false) {
         delete curr.completedStatus.updateCanDo;
+    }
+};
+
+/********************************************************************
+ * If the ID field is blank or undefined, generate a unique id to fill
+ * the blank field.
+ *********************************************************************/
+var checkIdField = function (acc, curr, arrIndex) {
+    try {
+        if (curr.id === undefined || curr.id === '' || curr.id === ' ') {
+            curr.id = uuidv5(applicationNS, uuidv4());
+            console.log(`Generating New UUID --- ${acc.options.currentFile} --- ${curr.id} --- ${counter++}`);
+            curr.completedStatus.idFieldFilled.status = true;
+            curr.completedStatus.idFieldFilled.message = 'NOTE: The ID needed to be created, and was successfully!';
+        } else {
+            console.log(`The  Existing  UUID --- ${acc.options.currentFile} --- ${curr.id} --- ${counter++}`);
+            curr.completedStatus.idFieldFilled.status = true;
+            curr.completedStatus.idFieldFilled.message = 'NOTE: The ID already existed!';
+        }
+        if (curr.id === undefined) {
+            curr.completedStatus.idFieldFilled.status = false;
+            curr.completedStatus.idFieldFilled.message = 'ERR0R: Unable to define the ID!';
+        }
+    } catch (e) {
+        curr.completedStatus.idFieldFilled.status = false;
+        curr.completedStatus.idFieldFilled.message = 'ERR0R: Something happnened when trying to set the ID!\n' + e;
     }
 };
 
@@ -110,17 +142,6 @@ var deleteKeys = function (acc, curr) {
     }
 };
 
-// TODO changeDifficultyLevel may need to be run outside of the reducer function.
-/********************************************************************
- * Changes Difficulty Level to either 0 or 1
- *********************************************************************/
-var changeDifficultyLevel = function (acc, curr) {
-    curr.completedStatus.changeDifficulty.status = false;
-    curr.completedStatus.changeDifficulty.message = 'Default Message';
-    curr.difficultyLevel;
-};
-
-
 /********************************************************************
  * Edit passagetext: setGlobalSelectors
  * 
@@ -164,6 +185,8 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $) {
                 // console.log($(ele).html()); // uncomment if you want to see the non-strict captures.
                 gs.instructions.exists = true;
                 return $(ele);
+            } else if ($(ele).text().toLowerCase().includes('passage') && ele.name === 'h1') {
+                console.log(`${acc.options.currentFile} - row ${arrIndex+2} - Has an ${ele.name} ${$(ele).text()} tag`);
             }
         }).first();
         gs.instructions.object = findInstructions;
@@ -245,6 +268,8 @@ var replaceText = function (acc, curr, arrIndex, $, gs) {
     var passage = gs.passage.set();
     var pExists = gs.passage.exists;
 
+    $('img').remove(); // They want all images removed. Any they want added in will be done in post-processing.
+
     if (iExists && wExists) {
         instructions.nextUntil(warmup).add(instructions).add(warmup.nextUntil(passage).not($('p').has('strong'))).remove('*');
         warmup.before('<h2>Definitions</h2>');
@@ -258,7 +283,7 @@ var replaceText = function (acc, curr, arrIndex, $, gs) {
     } else if (iExists & !wExists && !pExists) {
         curr.completedStatus.passageDelete.status = false;
         curr.completedStatus.passageDelete.message = 'NOTE: Instructions exist, but Warm-up and Passage do not. Ask Ted what to do.';
-        instructions.nextAll().add(instructions).remove('*');
+        // instructions.nextAll().add(instructions).remove('*');
     } else {
         curr.completedStatus.passageDelete.status = true;
         if (!iExists && wExists) {
@@ -286,7 +311,7 @@ var addClassDefinitions = function (acc, curr, arrIndex, $, gs) {
     var pExists = gs.passage.exists;
 
     if (!dExists) {
-        // console.log($('h2').first().text());
+        console.log($('h2').first().text());
     }
     
     if (dExists && pExists) {
@@ -397,6 +422,14 @@ var editPassageText = function (acc, curr, arrIndex) {
  *********************************************************************/
 var reducer = function (acc, curr, i) {
     curr.completedStatus = {
+        updateCanDo: {
+            status: false,
+            message: 'Default Message'
+        },
+        idFieldFilled: {
+            status: false,
+            message: 'Default Message'
+        }
         splitField: {
             status: false,
             message: 'Default Message'
@@ -433,30 +466,33 @@ var reducer = function (acc, curr, i) {
             status: false,
             message: 'Default Message'
         },
-        updateCanDo: {
-            status: false,
-            message: 'Default Message'
-        },
         changeDifficulty: {
             status: false,
             message: 'Default Message'
-        }
+        },
+        
     };
+    // TODO If ID Field is Blank, Generate Random ID to populate
+    checkIdField(acc, curr, i);
     updateQuestionCanDo(acc, curr);
     deleteKeys(acc, curr);
     splitQuestionName(acc, curr);
-    // TODO changeDifficultyLevel may need to be run outside of the reducer function.
-    changeDifficultyLevel(acc, curr);
     editPassageText(acc, curr, i);
-    curr.everyTaskSuccessful = Object.keys(curr.completedStatus).every(function(task){
-        return curr.completedStatus[task].status;
-    });
+    everyTaskSuccessful(acc, curr);
     // curr.thisFileNameIs = acc.options.currentFile;
     acc.push(curr);
     acc.options.counter++;
     return acc;
 };
 
+/********************************************************************
+ * Checks to see if on the current row, every task was successful.
+ *********************************************************************/
+var everyTaskSuccessful = function (acc, curr) {
+    curr.everyTaskSuccessful = Object.keys(curr.completedStatus).every(function (task) {
+        return curr.completedStatus[task].status;
+    });
+};
 
 /********************************************************************
  * used as a determinator for which directory the output files should
@@ -473,14 +509,53 @@ var everyRowPassed = function (reducedCSV) {
 };
 
 /********************************************************************
+ * If the ID field is the same as another id, reassign it a new ID.
+ *********************************************************************/
+var idIsUnique = function (reducedCSV) {
+
+};
+
+/********************************************************************
+ * Changes Difficulty Level to either 0 or 1
+ *********************************************************************/
+var changeDifficultyLevel = function (reducedCSV) {
+    var lowestDifficultyLevel = 1000;
+    if (reducedCSV[0].difficultylevel !== undefined) {
+        reducedCSV.forEach((row) => {
+            if (row.difficultylevel < lowestDifficultyLevel && !isNaN(parseInt(row.difficultylevel, 10))) {
+                lowestDifficultyLevel = row.difficultylevel;
+            } else if (isNaN(parseInt(row.difficultylevel, 10))) {
+                row.difficultylevel = 0;
+                row.completedStatus.changeDifficulty.status = true;
+                row.completedStatus.changeDifficulty.message = `ERR0R: difficultylevel input is not a number! NaN Error. It says: "${row.difficultylevel}"`;
+            }
+        });
+        reducedCSV.forEach((row) => {
+            if (row.difficultylevel > lowestDifficultyLevel && !isNaN(parseInt(row.difficultylevel, 10))) {
+                row.completedStatus.changeDifficulty.status = true;
+                row.difficultylevel = 1;
+            } else if (!isNaN(parseInt(row.difficultylevel, 10))) {
+                row.completedStatus.changeDifficulty.status = true;
+                row.difficultylevel = 0;
+            }
+        });
+    } else {
+        reducedCSV.forEach((row) => {
+            row.completedStatus.changeDifficulty.status = false;
+            row.completedStatus.changeDifficulty.message = 'WARNING: difficultylevel field is undefined on this file!';
+        });
+    }
+};
+
+/********************************************************************
  * appendErrorLog
  *********************************************************************/
 var appendErrorLog = function (reducedCSV, allPassed) {
     // Override completedStatus of reducedCSV to filter which items make it onto the error log. (Any Non-Commented Lines Will effect every row on every file).
     reducedCSV.forEach(function (row) {
-        // try{row.completedStatus.updateCanDo.status = true;}catch(e){}               // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        try{row.completedStatus.updateCanDo.status = true;}catch(e){}               // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         // try{row.completedStatus.splitField.status = true;}catch(e){}                // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        // try{row.completedStatus.keyRename.status = true;}catch(e){}                 // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        try{row.completedStatus.keyRename.status = true;}catch(e){}                 // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         // try{row.completedStatus.cheerioCanReadPassage.status = true;}catch(e){}     // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         // try{row.completedStatus.passageDelete.status = true;}catch(e){}             // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         // try{row.completedStatus.passageClass.status = true;}catch(e){}              // Set Any Field to True to Ignore it in the Error Log, and vice versa.
@@ -488,8 +563,9 @@ var appendErrorLog = function (reducedCSV, allPassed) {
         // try{row.completedStatus.passageDivPassage.status = true;}catch(e){}         // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         // try{row.completedStatus.fixCheerioAddCloseDiv.status = true;}catch(e){}     // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         // try{row.completedStatus.fixCheerioRemoveCloseLink.status = true;}catch(e){} // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        // try{row.completedStatus.changeDifficulty.status = true;}catch(e){} // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        // row.everyTaskSuccessful = Object.keys(row.completedStatus).every(function (task) {return row.completedStatus[task].status;});
+        // try{row.completedStatus.changeDifficulty.status = true;}catch(e){}          // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // try{row.completedStatus.idFieldFilled.status = true;}catch(e){}             // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        row.everyTaskSuccessful = Object.keys(row.completedStatus).every(function (task) {return row.completedStatus[task].status;});
         // row.everyTaskSuccessful = true; 
     });
     allPassed = everyRowPassed(reducedCSV);
@@ -501,15 +577,12 @@ var appendErrorLog = function (reducedCSV, allPassed) {
             if (!row.everyTaskSuccessful) {
                 Object.keys(row.completedStatus).forEach(function (task) {
                     if (row.completedStatus[task].status === false) {
-                        errorBody += ('At Row ' + (rowIndex+1).toString().padStart(2, '0') + ', task: "' + task).padEnd(45, ' ') + '": ' + row.completedStatus[task].message +/*  '\n' + row.passagetext + */ '\n\t';
+                        errorBody += ('At Row ' + (rowIndex+2).toString().padStart(2, '0') + ', task: "' + task).padEnd(45, ' ') + '": ' + row.completedStatus[task].message +/*  '\n' + row.passagetext + */ '\n\t';
                     }
                 });
             }
         });
-    } else {
-        true;
     }
-    
 };
 
 /********************************************************************
@@ -518,7 +591,6 @@ var appendErrorLog = function (reducedCSV, allPassed) {
 var setNewFileName = function (originalFileName) {
     var newFileName = originalFileName.replace(/(\w\w_\w\d_\w\w_\w\d+).*/, `${/$1/}_FA18.csv` );
     newFileName = newFileName.replace(/\//g, '');
-    console.log(newFileName);
     return newFileName;
 };
 
@@ -531,7 +603,7 @@ var writeFile = function (outputDirectory, outputName, dataToOutput) {
         if (err) {
             console.error(err);
         } else {
-            console.log('Output file to: ' + outputLocation);
+            // console.log('Output file to: ' + outputLocation);
         }
     });
 };
@@ -562,7 +634,10 @@ function main() {
         var csv = fs.readFileSync(targetDirectory + file, 'utf8'); // Read-In File
         var outputtedCSV = csvr(csv, csvrOptions, reducer); // Send it through reducer
         var reducedCSV = outputtedCSV.getReducedCSV(); // get reduced, unformatted csv
-        var csvOutput = outputtedCSV.getFormattedCSV(); // get reduced, formatted csv
+        // var csvOutput = outputtedCSV.getFormattedCSV(); // get reduced, formatted csv // DONT NEED THIS
+        idIsUnique(reducedCSV);
+        changeDifficultyLevel(reducedCSV); // Edit CSV's Difficulty Level
+        var csvOutput = outputtedCSV.formatCSV(reducedCSV, csvrOptions); 
         var allPassed = everyRowPassed(reducedCSV); // Find out if a file passed every test
         var newFileName = setNewFileName(file); // renames files to new format
         appendErrorLog(reducedCSV, allPassed); // Write Errors from each row to error log
