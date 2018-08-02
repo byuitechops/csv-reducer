@@ -20,11 +20,12 @@ var od_foundErrors = './csv-tests/ec3/ec3-production/ec3-csvs-outputs/ec3-csvs-f
 var getTargetFiles = function (targetDirectory) {
     var filesInDirectory = fs.readdirSync(targetDirectory);
     var desiredFilesOnly = filesInDirectory.reduce(function (acc, curr) {
-        if (curr.slice(-4) === '.csv' && curr.includes('V1')){
+        if (curr.slice(-4) === '.csv'/*  && curr.includes('V1') */){
             acc.push(curr);
         }
         return acc;
     }, []);
+    console.log(desiredFilesOnly.length);
     return desiredFilesOnly;
 };
 
@@ -109,6 +110,17 @@ var deleteKeys = function (acc, curr) {
     }
 };
 
+// TODO changeDifficultyLevel may need to be run outside of the reducer function.
+/********************************************************************
+ * Changes Difficulty Level to either 0 or 1
+ *********************************************************************/
+var changeDifficultyLevel = function (acc, curr) {
+    curr.completedStatus.changeDifficulty.status = false;
+    curr.completedStatus.changeDifficulty.message = 'Default Message';
+    curr.difficultyLevel;
+};
+
+
 /********************************************************************
  * Edit passagetext: setGlobalSelectors
  * 
@@ -116,7 +128,6 @@ var deleteKeys = function (acc, curr) {
  * USE:     
  * RETURNS: 
  *********************************************************************/
-var counter = 0;
 var setGlobalSelectors = function (acc, curr, arrIndex, $) {
     var gs = {
         instructions: {
@@ -181,11 +192,16 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $) {
     gs.passage.set = () => {
         gs.passage.exists = false;
         var findPassage = $('h2').add('h3').filter((index, ele) => {
-            if ($(ele).text() === 'Passage') {
+            if ($(ele).text() === 'Passage' && ele.name === 'h2') {
                 gs.passage.exists = true;
                 return $(ele);
-            } else if ($(ele).text().toLowerCase().includes('passage') || $(ele).text().toLowerCase().includes('pasage')) {
+            } else if ( ($(ele).text().toLowerCase().includes('passage') || $(ele).text().toLowerCase().includes('pasage')) && ele.name === 'h2' ) {
                 $(ele).html('Passage'); // fix misspelling
+                gs.passage.exists = true;
+                return $(ele);
+            } else if ($(ele).text().toLowerCase().includes('passage') && ele.name === 'h3') {
+                // console.log(`${acc.options.currentFile} has ${ele.name} tags in one of its passage tags on row ${arrIndex+2}.`);
+                $(ele).replaceWith('<h2>Passage</h2>');
                 gs.passage.exists = true;
                 return $(ele);
             }
@@ -201,7 +217,6 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $) {
         gs.definitions.exists = false;
         var findDefinitions = $('h2').filter((index, ele) => {
             if ($(ele).text().toLowerCase().includes('definition')) {
-                console.log('Definitions Exists');
                 gs.definitions.exists = true;
                 return $(ele);
             }
@@ -232,7 +247,7 @@ var replaceText = function (acc, curr, arrIndex, $, gs) {
 
     if (iExists && wExists) {
         instructions.nextUntil(warmup).add(instructions).add(warmup.nextUntil(passage).not($('p').has('strong'))).remove('*');
-        warmup.after('<h2>Definitions</h2>');
+        warmup.before('<h2>Definitions</h2>');
         warmup.remove();
         curr.completedStatus.passageDelete.status = true;
     } else if (iExists && pExists) {
@@ -256,7 +271,6 @@ var replaceText = function (acc, curr, arrIndex, $, gs) {
     }
 };
 
-// TODO Redo this function to use selectors like replaceText() does.
 /********************************************************************
  * Edit passagetext: addClassDefinitions
  *
@@ -266,8 +280,8 @@ var replaceText = function (acc, curr, arrIndex, $, gs) {
  *********************************************************************/
 var addClassDefinitions = function (acc, curr, arrIndex, $, gs) {
     // Gets all the <p><strong> combinations between the first h2 tag and the next one.
-    var definitions = gs.instructions.set();
-    var dExists = gs.instructions.exists;
+    var definitions = gs.definitions.set();
+    var dExists = gs.definitions.exists;
     var passage = gs.passage.set();
     var pExists = gs.passage.exists;
 
@@ -294,7 +308,6 @@ var addClassDefinitions = function (acc, curr, arrIndex, $, gs) {
     }
 };
 
-// TODO Redo this function to use selectors like replaceText() does.
 /********************************************************************
  * Edit passagetext: addDivsAround
  *
@@ -303,8 +316,8 @@ var addClassDefinitions = function (acc, curr, arrIndex, $, gs) {
  * RETURNS: void
  *********************************************************************/
 var addDivsAround = function (acc, curr, arrIndex, $, gs) {
-    var definitions = gs.instructions.set();
-    var dExists = gs.instructions.exists;
+    var definitions = gs.definitions.set();
+    var dExists = gs.definitions.exists;
     var passage = gs.passage.set();
     var pExists = gs.passage.exists;
 
@@ -423,12 +436,17 @@ var reducer = function (acc, curr, i) {
         updateCanDo: {
             status: false,
             message: 'Default Message'
+        },
+        changeDifficulty: {
+            status: false,
+            message: 'Default Message'
         }
     };
     updateQuestionCanDo(acc, curr);
     deleteKeys(acc, curr);
     splitQuestionName(acc, curr);
-    // TODO Add Change-Difficulty-Level Function Here
+    // TODO changeDifficultyLevel may need to be run outside of the reducer function.
+    changeDifficultyLevel(acc, curr);
     editPassageText(acc, curr, i);
     curr.everyTaskSuccessful = Object.keys(curr.completedStatus).every(function(task){
         return curr.completedStatus[task].status;
@@ -460,9 +478,9 @@ var everyRowPassed = function (reducedCSV) {
 var appendErrorLog = function (reducedCSV, allPassed) {
     // Override completedStatus of reducedCSV to filter which items make it onto the error log. (Any Non-Commented Lines Will effect every row on every file).
     reducedCSV.forEach(function (row) {
-        try{row.completedStatus.updateCanDo.status = true;}catch(e){}               // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        try{row.completedStatus.splitField.status = true;}catch(e){}                // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        try{row.completedStatus.keyRename.status = true;}catch(e){}                 // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // try{row.completedStatus.updateCanDo.status = true;}catch(e){}               // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // try{row.completedStatus.splitField.status = true;}catch(e){}                // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // try{row.completedStatus.keyRename.status = true;}catch(e){}                 // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         // try{row.completedStatus.cheerioCanReadPassage.status = true;}catch(e){}     // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         // try{row.completedStatus.passageDelete.status = true;}catch(e){}             // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         // try{row.completedStatus.passageClass.status = true;}catch(e){}              // Set Any Field to True to Ignore it in the Error Log, and vice versa.
@@ -470,7 +488,8 @@ var appendErrorLog = function (reducedCSV, allPassed) {
         // try{row.completedStatus.passageDivPassage.status = true;}catch(e){}         // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         // try{row.completedStatus.fixCheerioAddCloseDiv.status = true;}catch(e){}     // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         // try{row.completedStatus.fixCheerioRemoveCloseLink.status = true;}catch(e){} // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        row.everyTaskSuccessful = Object.keys(row.completedStatus).every(function (task) {return row.completedStatus[task].status;});
+        // try{row.completedStatus.changeDifficulty.status = true;}catch(e){} // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // row.everyTaskSuccessful = Object.keys(row.completedStatus).every(function (task) {return row.completedStatus[task].status;});
         // row.everyTaskSuccessful = true; 
     });
     allPassed = everyRowPassed(reducedCSV);
@@ -494,10 +513,20 @@ var appendErrorLog = function (reducedCSV, allPassed) {
 };
 
 /********************************************************************
+ * setNewFileName()
+ *********************************************************************/
+var setNewFileName = function (originalFileName) {
+    var newFileName = originalFileName.replace(/(\w\w_\w\d_\w\w_\w\d+).*/, `${/$1/}_FA18.csv` );
+    newFileName = newFileName.replace(/\//g, '');
+    console.log(newFileName);
+    return newFileName;
+};
+
+/********************************************************************
  * async outputfile
  *********************************************************************/
 var writeFile = function (outputDirectory, outputName, dataToOutput) {
-    var outputLocation = outputDirectory /* + Date.now() */ + '_' + outputName;
+    var outputLocation = outputDirectory + outputName;
     fs.writeFile(outputLocation, dataToOutput, function (err) {
         if (err) {
             console.error(err);
@@ -511,9 +540,9 @@ var writeFile = function (outputDirectory, outputName, dataToOutput) {
  * main
  *********************************************************************/
 function main() {
-    var outputDirectory = '';
+    var outputDirectory = od_noErrors;
     const targetFiles = getTargetFiles(targetDirectory); // Get Array of Files to Cycle Through
-    // const targetFiles = ['FP_L1_DE_T10_POC4_V1_CSS.csv', 'FP_R1_DE_T8_POC4_V1_CSS.csv', 'FP_S1_AS_T11_POC4_V1_CSS.csv', 'FP_W1_AS_T10_POC4_V1_CSS.csv'];
+    // const targetFiles = ['FP_L1_DE_T10_POC4_V1_CSS.csv', 'FP_R1_DE_T8_POC4_V1_CSS.csv', 'FP_S1_AS_T11_POC4_V1_CSS.csv', 'FP_W1_AS_T10_POC4_V1_CSS.csv']; 
     // const targetFiles = ['FP_L1_DE_T11_POC4_V1_CSS.csv','FP_R1_NA_T8_POC4_V1_CSS.csv','FP_S1_NA_T9_POC4_V1_CSS.csv','FP_W1_NE_T5_POC4_V1_CSS.csv']; // for testing
     var csvrOptions = { // Set Options:
         headersOut: [
@@ -535,14 +564,9 @@ function main() {
         var reducedCSV = outputtedCSV.getReducedCSV(); // get reduced, unformatted csv
         var csvOutput = outputtedCSV.getFormattedCSV(); // get reduced, formatted csv
         var allPassed = everyRowPassed(reducedCSV); // Find out if a file passed every test
+        var newFileName = setNewFileName(file); // renames files to new format
         appendErrorLog(reducedCSV, allPassed); // Write Errors from each row to error log
-        if (allPassed) outputDirectory = od_noErrors; // Determine whether file-output should go to >>
-        else outputDirectory = od_foundErrors;        // error or no-error folder.
-        outputDirectory = od_noErrors; // Uncomment this line if you want all files to go to the same place
-        // TODO Create a Function that will Take Each File Name and Change it to the new Naming Format.
-        // writeFile(outputDirectory, file, csvOutput); // Write the File
-        var outputLocation = outputDirectory + Date.now() + '_' + file;
-        // console.log('Output file to: ' + outputLocation);
+        writeFile(outputDirectory, newFileName, csvOutput); // Write the File
         callback(null);
     };
     // This is where the cycling really happens:
@@ -550,7 +574,7 @@ function main() {
         if (err) console.error(err);
         else {
             errorDocument += errorHeader + errorBody;
-            writeFile(od_foundErrors, '_errorLog.txt', errorDocument); // Write Error-Log Document
+            writeFile(od_foundErrors, '__errorLog.txt', errorDocument); // Write Error-Log Document
         }
     });
     // DONE
