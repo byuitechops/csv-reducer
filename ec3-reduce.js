@@ -83,11 +83,11 @@ var checkIdField = function (acc, curr, arrIndex) {
     try {
         if (curr.id === undefined || curr.id === '' || curr.id === ' ') {
             curr.id = uuidv5(applicationNS, uuidv4());
-            console.log(`Generating New UUID --- ${acc.options.currentFile} --- ${curr.id} --- ${counter++}`);
+            // console.log(`Generating New UUID --- ${acc.options.currentFile} --- ${curr.id} --- ${null}`);
             curr.completedStatus.idFieldFilled.status = true;
             curr.completedStatus.idFieldFilled.message = 'NOTE: The ID needed to be created, and was successfully!';
         } else {
-            console.log(`The  Existing  UUID --- ${acc.options.currentFile} --- ${curr.id} --- ${counter++}`);
+            // console.log(`The  Existing  UUID --- ${acc.options.currentFile} --- ${curr.id} --- ${null}`);
             curr.completedStatus.idFieldFilled.status = true;
             curr.completedStatus.idFieldFilled.message = 'NOTE: The ID already existed!';
         }
@@ -398,6 +398,8 @@ var editPassageText = function (acc, curr, arrIndex) {
     try {
         var $ = cheerio.load(curr.passagetext, {xmlMode: true}); // Declare Cheerio Object
         var gs = setGlobalSelectors(acc, curr, arrIndex, $);
+        // TODO Replace all Audio Tags with uniqueStringForAudioTags Record whether a file had to have the audio tag replaced, and how many.
+        // TODO And Also create a check for image tags doing likewise if there is enough time.
         replaceText(acc, curr, arrIndex, $, gs); // "Passage Content to Delete" Section
         addClassDefinitions(acc, curr, arrIndex, $, gs); // "Adding Class Definitions"
         addDivsAround(acc, curr, arrIndex, $, gs); // "Add Divs" Section
@@ -429,7 +431,7 @@ var reducer = function (acc, curr, i) {
         idFieldFilled: {
             status: false,
             message: 'Default Message'
-        }
+        },
         splitField: {
             status: false,
             message: 'Default Message'
@@ -466,13 +468,15 @@ var reducer = function (acc, curr, i) {
             status: false,
             message: 'Default Message'
         },
-        changeDifficulty: {
+        idFieldIsUnique: {
             status: false,
             message: 'Default Message'
         },
-        
+        changeDifficulty: {
+            status: false,
+            message: 'Default Message'
+        }
     };
-    // TODO If ID Field is Blank, Generate Random ID to populate
     checkIdField(acc, curr, i);
     updateQuestionCanDo(acc, curr);
     deleteKeys(acc, curr);
@@ -508,11 +512,21 @@ var everyRowPassed = function (reducedCSV) {
     });
 };
 
+// TODO This needs to check all files in the batch, not just within the same file. It needs to be reworked. Consider it being a post-process function??? Do Audio Processing First.
 /********************************************************************
  * If the ID field is the same as another id, reassign it a new ID.
  *********************************************************************/
 var idIsUnique = function (reducedCSV) {
-
+    reducedCSV.forEach((item, iIndex) => {
+        item.completedStatus.idFieldIsUnique.status = true;
+        item.completedStatus.idFieldIsUnique.message = 'NOTE: Assuming ID is unique unless a match is found!';
+        reducedCSV.((row, rIndex) => {
+            if (row.Index === item.index && iIndex !== rIndex) {
+                item.completedStatus.idFieldIsUnique.status = false;
+                item.completedStatus.idFieldIsUnique.message = `FATAL ERR0R: This ID is a duplicate! ${item.id}. It is found on `;
+            }
+        });
+    });
 };
 
 /********************************************************************
@@ -565,6 +579,7 @@ var appendErrorLog = function (reducedCSV, allPassed) {
         // try{row.completedStatus.fixCheerioRemoveCloseLink.status = true;}catch(e){} // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         // try{row.completedStatus.changeDifficulty.status = true;}catch(e){}          // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         // try{row.completedStatus.idFieldFilled.status = true;}catch(e){}             // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // try{row.completedStatus.idFieldIsUnique.status = true;}catch(e){}           // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         row.everyTaskSuccessful = Object.keys(row.completedStatus).every(function (task) {return row.completedStatus[task].status;});
         // row.everyTaskSuccessful = true; 
     });
