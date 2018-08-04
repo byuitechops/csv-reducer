@@ -1,21 +1,31 @@
 /********************************************************************
  * Declare Dependancies
  *********************************************************************/
+// Core Libraries
 const fs = require('fs');
 const csvr = require('./main.js');
 const cheerio = require('cheerio');
 const asynclib = require('async');
+// UUID
 const uuidv4 = require('uuid/v4'); 
 const uuidv5 = require('uuid/v5');
 const applicationNS = 'EC_POC';
+// Error Document
 var errorDocument = 'The Following Errors Occurred While Parsing the EC3 CSVs On ' + Date() + '\n';
 var errorHeader = '\nThe Following Files Had One or More Error:\n';
 var errorBody = '\n';
+// Optional Reports:
+var batch = 'Reading'; // set batch here
+var audioFilesLogReport = 'batch|filename|row|value|message\n';
+var questioncandoLogReport = 'batch|filename|row|value|message\n';
+var passagetexttypeLogReport = 'batch|filename|row|value|message\n';
+// Other Variables
 var uniqueString = '<div class="addclosingdiv">heylookherethisisasentancethatwillhopefullyneverappearinanyfilefromheretotherestofforeverinanyec3courseyay</div>';
-var uniqueStringForAudioTags = '<uniquetag>ReplaceAudioFileTagHere</uniquetag>';
+var uniqueStringForAudioTags = '[[Replace audio file here filename.mp3]]';
 const targetDirectory = './csv-tests/ec3/ec3-production/ec3-csvs-originals/R/'; // for production
 var od_noErrors = './csv-tests/ec3/ec3-production/ec3-csvs-outputs/ec3-csvs-no-errors/'; // for production
 var od_foundErrors = './csv-tests/ec3/ec3-production/ec3-csvs-outputs/ec3-csvs-found-errors/'; // for production
+var indexOffset = 2;
 var counter = 0;
 
 
@@ -25,7 +35,7 @@ var counter = 0;
 var getTargetFiles = function (targetDirectory) {
     var filesInDirectory = fs.readdirSync(targetDirectory);
     var desiredFilesOnly = filesInDirectory.reduce(function (acc, curr) {
-        if (curr.slice(-4) === '.csv'/*  && curr.includes('V1') */){
+        if (curr.slice(-4) === '.csv'){
             acc.push(curr);
         }
         return acc;
@@ -51,19 +61,21 @@ var shouldUpdateCando = function (filename) {
 /********************************************************************
  * Updates the Question can-do field from incorrect values.
  *********************************************************************/
-var updateQuestionCanDo = function (acc, curr) {
-    if (curr.questioncando !== undefined && acc.options.updateCanDoField) {
+var updateQuestionCanDo = function (acc, curr, arrIndex) {
+    if (curr.questioncando !== undefined && !curr.questioncando.toLowerCase().includes('f') && curr.questioncando !== '') {
+        // console.log(`In ${acc.options.currentFile} on row ${arrIndex+indexOffset} in questioncando it says: "${curr.questioncando}"`);
+        questioncandoLogReport += `${batch}|${acc.options.currentFile}|${arrIndex+indexOffset}|${curr.questioncando}|NOTE: This value was changed from "${curr.questioncando}" to "".\n`;
+        curr.questioncando = '';
+    }
+    // This needs to be separate from the above if statement.
+    if (curr.questioncando !== undefined && acc.options.updateCanDoField && curr.questioncando !== '') {
         if (curr.questioncando === 'f9') { // and file is for read or write,
-            // console.log('Updating f9 to f10!');
             curr.questioncando = 'f10'; // f9 to f10
         } else if (curr.questioncando === 'f10') {
-            // console.log('Updating f10 to f11!');
             curr.questioncando = 'f11'; // f10 to f11
         } else if (curr.questioncando === 'f11') {
-            // console.log('Updating f11 to f9!');
             curr.questioncando = 'f9'; // f11 to f9
         } else if (curr.questioncando === 'f31') {
-            // console.log('Updating f31 to f30!');
             curr.questioncando = 'f30'; // f31 to f30
         }
         curr.completedStatus.updateCanDo.status = true;
@@ -81,13 +93,11 @@ var updateQuestionCanDo = function (acc, curr) {
  *********************************************************************/
 var checkIdField = function (acc, curr, arrIndex) {
     try {
-        if (curr.id === undefined || curr.id === '' || curr.id === ' ') {
+        if (false || curr.id === undefined || curr.id === '' || curr.id === ' ') { // change to true ONLY if you want to change the ID of every item in every csv. Keep on false by default.
             curr.id = uuidv5(applicationNS, uuidv4());
-            // console.log(`Generating New UUID --- ${acc.options.currentFile} --- ${curr.id} --- ${null}`);
-            curr.completedStatus.idFieldFilled.status = true;
-            curr.completedStatus.idFieldFilled.message = 'NOTE: The ID needed to be created, and was successfully!';
+            curr.completedStatus.idFieldFilled.status = false;
+            curr.completedStatus.idFieldFilled.message = 'NOTE: The ID needed to be created! This new ID may not match the original batch!';
         } else {
-            // console.log(`The  Existing  UUID --- ${acc.options.currentFile} --- ${curr.id} --- ${null}`);
             curr.completedStatus.idFieldFilled.status = true;
             curr.completedStatus.idFieldFilled.message = 'NOTE: The ID already existed!';
         }
@@ -105,7 +115,7 @@ var checkIdField = function (acc, curr, arrIndex) {
  *  splitQuestionName into questionname and passagename
  *********************************************************************/
 var splitQuestionName = function (acc, curr) {
-    if (curr.questionname !== undefined){
+    if (curr.questionname !== undefined && curr.questionname !== ''){
         var pqname = curr.questionname.replace(/\s/g, ''); //remove all spaces
         curr.questionname = pqname.replace(/passage\d+/i, '');
         curr.passagename = pqname.replace(/question\d+/i, '');
@@ -117,10 +127,42 @@ var splitQuestionName = function (acc, curr) {
 };
 
 /********************************************************************
+ * 
+ *********************************************************************/
+var verifyQuestionTypeField = function (acc, curr, arrIndex) {
+    if (curr.questiontype !== undefined && curr.questiontype.includes('long ansswer')) {
+        curr.completedStatus.questionTypeVerified.status = true;
+        curr.completedStatus.questionTypeVerified.message = 'NOTE: This file needed input fixed from "long ansswer" to "long answer"';
+        // console.log(`In file ${acc.options.currentFile} on row ${arrIndex+indexOffset} it says ${curr.questiontype}`);
+        curr.questiontype = 'long answer';
+    } else if (curr.questiontype !== undefined) {
+        curr.completedStatus.questionTypeVerified.status = true;
+        curr.completedStatus.questionTypeVerified.message = 'NOTE: This file didn\'t need any fixing.';
+    }
+};
+
+/********************************************************************
+ * 
+ *********************************************************************/
+var verifyPassageTextType = function (acc, curr, arrIndex) {
+    if (curr.passagetexttype !== undefined && (curr.passagetexttype.toLowerCase().includes('c1') || curr.passagetexttype.toLowerCase().includes('c2') || curr.passagetexttype.toLowerCase().includes('c3') || curr.passagetexttype === '')) {
+        curr.completedStatus.passageTextTypeVerified.status = true;
+        curr.completedStatus.passageTextTypeVerified.message = 'NOTE: This file is fine."';
+        // console.log(`In file ${acc.options.currentFile} on row ${arrIndex+indexOffset} it says ${curr.questiontype}`);
+        curr.questiontype = 'long answer';
+    } else if (curr.passagetexttype !== undefined && !curr.passagetexttype.toLowerCase().includes('c')) {
+        passagetexttypeLogReport += `${batch}|${acc.options.currentFile}|${arrIndex+indexOffset}|${curr.passagetexttype}|NOTE: This file did not conform with the expectations. They were not edited.\n`;
+        // curr.passagetexttype = ''; // 
+        curr.completedStatus.passageTextTypeVerified.status = false;
+        curr.completedStatus.passageTextTypeVerified.message = 'WARNING: This file has a value that is not blank and is missing an identifier (Expected \'C\' somewhere).';
+    }
+};
+
+/********************************************************************
  * Renames then deletes some keys on the json.
  *********************************************************************/
 var deleteKeys = function (acc, curr) {
-    if (curr.passageaudiofilename !== undefined && curr.questionaudiofilename !== undefined) {
+    if (curr.passageaudiofilename !== undefined && curr.questionaudiofilename !== undefined && curr.passageaudiofilename !== '' && curr.questionaudiofilename !== '') {
         curr.passageaudiotranscript = curr.passageaudiofilename;
         curr.questionaudiotranscript = curr.questionaudiofilename;
         delete curr.passageaudiofilename;
@@ -186,14 +228,14 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $) {
                 gs.instructions.exists = true;
                 return $(ele);
             } else if ($(ele).text().toLowerCase().includes('passage') && ele.name === 'h1') {
-                console.log(`${acc.options.currentFile} - row ${arrIndex+2} - Has an ${ele.name} ${$(ele).text()} tag`);
+                // console.log(`${acc.options.currentFile} - row ${arrIndex+indexOffset} - Has an ${ele.name} ${$(ele).text()} tag`);
             }
         }).first();
         gs.instructions.object = findInstructions;
         return findInstructions;
     };
     gs.instructions.set();
-    // if (!gs.instructions.exists) {console.log(`${gs.instructions.exists} + ${counter++} + ${acc.options.currentFile} + row ${arrIndex+2}`);}
+    // if (!gs.instructions.exists) {console.log(`${gs.instructions.exists} + ${counter++} + ${acc.options.currentFile} + row ${arrIndex+indexOffset}`);}
     
     // Finding <h2>Warm-up</h2> and exceptions
     gs.warmup.set = () => {
@@ -223,7 +265,7 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $) {
                 gs.passage.exists = true;
                 return $(ele);
             } else if ($(ele).text().toLowerCase().includes('passage') && ele.name === 'h3') {
-                // console.log(`${acc.options.currentFile} has ${ele.name} tags in one of its passage tags on row ${arrIndex+2}.`);
+                // console.log(`${acc.options.currentFile} has ${ele.name} tags in one of its passage tags on row ${arrIndex+indexOffset}.`);
                 $(ele).replaceWith('<h2>Passage</h2>');
                 gs.passage.exists = true;
                 return $(ele);
@@ -251,6 +293,30 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $) {
     
 
     return gs;
+};
+
+/********************************************************************
+ * Edit passagetext: replaceAudioTag
+ *********************************************************************/
+var replaceAudioTag = function (acc, curr, arrIndex, $, gs) {
+    var audioTags = $('audio');
+    if (audioTags.length > 1) {
+        curr.completedStatus.audioFileEditComplete.status = false;
+        curr.completedStatus.audioFileEditComplete.message = 'ERR0R: This row had more than one audio file!';
+        audioTags.forEach((element) => {
+            audioFilesLogReport += `${batch}|${acc.options.currentFile}|${arrIndex+indexOffset}|${element.attr('src')}|WARNING: This file has more than one audio tag!\n`;
+        });
+    } else if (audioTags.length === 1) {
+        var audioSrc = audioTags.attr('src');
+        audioFilesLogReport += `${batch}|${acc.options.currentFile}|${arrIndex+indexOffset}|${audioSrc}|Success!\n`;
+        audioTags.replace(uniqueStringForAudioTags);
+        curr.completedStatus.audioFileEditComplete.status = true;
+        curr.completedStatus.audioFileEditComplete.message = `NOTE: This row's audio source is: ${audioSrc}`;
+    } else if (audioTags.length < 1) {
+        curr.completedStatus.audioFileEditComplete.status = true;
+        curr.completedStatus.audioFileEditComplete.message = 'NOTE: This row had no audio files.';
+    }
+    // console.log(`${acc.options.currentFile} on row ${arrIndex+indexOffset} src is: ${audioTags.length/*.attr('src')*/}`);
 };
 
 /********************************************************************
@@ -283,7 +349,6 @@ var replaceText = function (acc, curr, arrIndex, $, gs) {
     } else if (iExists & !wExists && !pExists) {
         curr.completedStatus.passageDelete.status = false;
         curr.completedStatus.passageDelete.message = 'NOTE: Instructions exist, but Warm-up and Passage do not. Ask Ted what to do.';
-        // instructions.nextAll().add(instructions).remove('*');
     } else {
         curr.completedStatus.passageDelete.status = true;
         if (!iExists && wExists) {
@@ -311,7 +376,7 @@ var addClassDefinitions = function (acc, curr, arrIndex, $, gs) {
     var pExists = gs.passage.exists;
 
     if (!dExists) {
-        console.log($('h2').first().text());
+        // console.log($('h2').first().text());
     }
     
     if (dExists && pExists) {
@@ -398,7 +463,7 @@ var editPassageText = function (acc, curr, arrIndex) {
     try {
         var $ = cheerio.load(curr.passagetext, {xmlMode: true}); // Declare Cheerio Object
         var gs = setGlobalSelectors(acc, curr, arrIndex, $);
-        // TODO Replace all Audio Tags with uniqueStringForAudioTags Record whether a file had to have the audio tag replaced, and how many.
+        replaceAudioTag(acc, curr, arrIndex, $, gs);
         // TODO And Also create a check for image tags doing likewise if there is enough time.
         replaceText(acc, curr, arrIndex, $, gs); // "Passage Content to Delete" Section
         addClassDefinitions(acc, curr, arrIndex, $, gs); // "Adding Class Definitions"
@@ -407,7 +472,7 @@ var editPassageText = function (acc, curr, arrIndex) {
         fixCheerio(acc, curr);
         curr.completedStatus.cheerioCanReadPassage.status = true;
     } catch (err) {
-        errorBody += `${acc.options.currentFile} ${arrIndex+2} '\n'${err}\n`;
+        errorBody += `${acc.options.currentFile} ${arrIndex+indexOffset} '\n'${err}\n`;
         curr.completedStatus.cheerioCanReadPassage.status = false;
         curr.completedStatus.cheerioCanReadPassage.message = 'FATAL ERR0R: Cheerio was unable to edit the passagetext\'s HTML (Did it have any?)!';
         delete curr.completedStatus.passageDelete;
@@ -440,7 +505,19 @@ var reducer = function (acc, curr, i) {
             status: false,
             message: 'Default Message'
         },
+        questionTypeVerified: {
+            status: false,
+            message: 'Default Message'
+        },
+        passageTextTypeVerified: {
+            status: false,
+            message: 'Default Message'
+        },
         cheerioCanReadPassage: {
+            status: false,
+            message: 'Default Message'
+        },
+        audioFileEditComplete: {
             status: false,
             message: 'Default Message'
         },
@@ -468,22 +545,21 @@ var reducer = function (acc, curr, i) {
             status: false,
             message: 'Default Message'
         },
-        idFieldIsUnique: {
-            status: false,
-            message: 'Default Message'
-        },
         changeDifficulty: {
             status: false,
             message: 'Default Message'
         }
     };
     checkIdField(acc, curr, i);
-    updateQuestionCanDo(acc, curr);
+    updateQuestionCanDo(acc, curr, i);
     deleteKeys(acc, curr);
     splitQuestionName(acc, curr);
+    // TODO verify passagetexttype make sure it has C in it
+    verifyPassageTextType(acc, curr, i);
+    verifyQuestionTypeField(acc, curr, i);
     editPassageText(acc, curr, i);
     everyTaskSuccessful(acc, curr);
-    // curr.thisFileNameIs = acc.options.currentFile;
+    curr.thisFileNameIs = acc.options.currentFile;
     acc.push(curr);
     acc.options.counter++;
     return acc;
@@ -509,23 +585,6 @@ var everyRowPassed = function (reducedCSV) {
         } else {
             return false;
         }
-    });
-};
-
-// TODO This needs to check all files in the batch, not just within the same file. It needs to be reworked. Consider it being a post-process function??? Do Audio Processing First.
-/********************************************************************
- * If the ID field is the same as another id, reassign it a new ID.
- *********************************************************************/
-var idIsUnique = function (reducedCSV) {
-    reducedCSV.forEach((item, iIndex) => {
-        item.completedStatus.idFieldIsUnique.status = true;
-        item.completedStatus.idFieldIsUnique.message = 'NOTE: Assuming ID is unique unless a match is found!';
-        reducedCSV.((row, rIndex) => {
-            if (row.Index === item.index && iIndex !== rIndex) {
-                item.completedStatus.idFieldIsUnique.status = false;
-                item.completedStatus.idFieldIsUnique.message = `FATAL ERR0R: This ID is a duplicate! ${item.id}. It is found on `;
-            }
-        });
     });
 };
 
@@ -567,10 +626,13 @@ var changeDifficultyLevel = function (reducedCSV) {
 var appendErrorLog = function (reducedCSV, allPassed) {
     // Override completedStatus of reducedCSV to filter which items make it onto the error log. (Any Non-Commented Lines Will effect every row on every file).
     reducedCSV.forEach(function (row) {
+        try{row.completedStatus.idFieldFilled.status = true;}catch(e){}             // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         try{row.completedStatus.updateCanDo.status = true;}catch(e){}               // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         // try{row.completedStatus.splitField.status = true;}catch(e){}                // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         try{row.completedStatus.keyRename.status = true;}catch(e){}                 // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // try{row.completedStatus.questionTypeVerified.status = true;}catch(e){}     // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         // try{row.completedStatus.cheerioCanReadPassage.status = true;}catch(e){}     // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        // try{row.completedStatus.audioFileEditComplete.status = true;}catch(e){}     // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         // try{row.completedStatus.passageDelete.status = true;}catch(e){}             // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         // try{row.completedStatus.passageClass.status = true;}catch(e){}              // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         // try{row.completedStatus.passageDivDefinition.status = true;}catch(e){}      // Set Any Field to True to Ignore it in the Error Log, and vice versa.
@@ -578,8 +640,6 @@ var appendErrorLog = function (reducedCSV, allPassed) {
         // try{row.completedStatus.fixCheerioAddCloseDiv.status = true;}catch(e){}     // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         // try{row.completedStatus.fixCheerioRemoveCloseLink.status = true;}catch(e){} // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         // try{row.completedStatus.changeDifficulty.status = true;}catch(e){}          // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        // try{row.completedStatus.idFieldFilled.status = true;}catch(e){}             // Set Any Field to True to Ignore it in the Error Log, and vice versa.
-        // try{row.completedStatus.idFieldIsUnique.status = true;}catch(e){}           // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         row.everyTaskSuccessful = Object.keys(row.completedStatus).every(function (task) {return row.completedStatus[task].status;});
         // row.everyTaskSuccessful = true; 
     });
@@ -592,7 +652,7 @@ var appendErrorLog = function (reducedCSV, allPassed) {
             if (!row.everyTaskSuccessful) {
                 Object.keys(row.completedStatus).forEach(function (task) {
                     if (row.completedStatus[task].status === false) {
-                        errorBody += ('At Row ' + (rowIndex+2).toString().padStart(2, '0') + ', task: "' + task).padEnd(45, ' ') + '": ' + row.completedStatus[task].message +/*  '\n' + row.passagetext + */ '\n\t';
+                        errorBody += ('At Row ' + (rowIndex+indexOffset).toString().padStart(2, '0') + ', task: "' + task).padEnd(45, ' ') + '": ' + row.completedStatus[task].message +/*  '\n' + row.passagetext + */ '\n\t';
                     }
                 });
             }
@@ -650,11 +710,11 @@ function main() {
         var outputtedCSV = csvr(csv, csvrOptions, reducer); // Send it through reducer
         var reducedCSV = outputtedCSV.getReducedCSV(); // get reduced, unformatted csv
         // var csvOutput = outputtedCSV.getFormattedCSV(); // get reduced, formatted csv // DONT NEED THIS
-        idIsUnique(reducedCSV);
         changeDifficultyLevel(reducedCSV); // Edit CSV's Difficulty Level
         var csvOutput = outputtedCSV.formatCSV(reducedCSV, csvrOptions); 
         var allPassed = everyRowPassed(reducedCSV); // Find out if a file passed every test
         var newFileName = setNewFileName(file); // renames files to new format
+        // newFileName = file; // Uncomment if you want ot keep the original filename
         appendErrorLog(reducedCSV, allPassed); // Write Errors from each row to error log
         writeFile(outputDirectory, newFileName, csvOutput); // Write the File
         callback(null);
@@ -665,6 +725,9 @@ function main() {
         else {
             errorDocument += errorHeader + errorBody;
             writeFile(od_foundErrors, '__errorLog.txt', errorDocument); // Write Error-Log Document
+            writeFile(od_foundErrors, 'audioFileReport.csv', audioFilesLogReport); // A record of all
+            writeFile(od_foundErrors, 'questioncandoReport.csv', questioncandoLogReport); // A record of all
+            writeFile(od_foundErrors, 'passagetexttypeReport.csv', passagetexttypeLogReport); // A record of all
         }
     });
     // DONE
