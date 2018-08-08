@@ -15,15 +15,17 @@ var errorDocument = 'The Following Errors Occurred While Parsing the EC3 CSVs On
 var errorHeader = '\nThe Following Files Had One or More Error:\n';
 var errorBody = '\n';
 // Optional Reports:
-var batch = 'Reading'; // set batch here
-var audioFilesLogReport = 'batch|filename|row|value|message\n';
+var batch = 'Writing'; // set batch here
+var audioFilesLogReport = 'batch|filename|row|value|message\n'; // ___Report += `${}|${}|${}|${}|${}\n`
 var questioncandoLogReport = 'batch|filename|row|value|message\n';
 var passagetexttypeLogReport = 'batch|filename|row|value|message\n';
+var temporaryproblemReport = 'batch|filename|row|value|message\n';
 // Other Variables
 var uniqueString = '<div class="addclosingdiv">heylookherethisisasentancethatwillhopefullyneverappearinanyfilefromheretotherestofforeverinanyec3courseyay</div>';
 var uniqueStringForAudioTags = '[[Replace audio file here filename.mp3]]';
-const targetDirectory = './csv-tests/ec3/ec3-production/ec3-csvs-originals/R/'; // for production
-var od_noErrors = './csv-tests/ec3/ec3-production/ec3-csvs-outputs/ec3-csvs-no-errors/'; // for production
+// const targetDirectory = './csv-tests/ec3/ec3-production/ec3-csvs-originals/R/'; // for production
+var targetDirectory = './csv-tests/ec3/ec3-production/ec3-csvs-outputs/ec3-csvs-no-errors/I_W/'; // for production
+var od_noErrors = './csv-tests/ec3/ec3-production/ec3-csvs-outputs/ec3-csvs-no-errors/W/'; // for production
 var od_foundErrors = './csv-tests/ec3/ec3-production/ec3-csvs-outputs/ec3-csvs-found-errors/'; // for production
 var indexOffset = 2;
 var counter = 0;
@@ -114,7 +116,7 @@ var checkIdField = function (acc, curr, arrIndex) {
 /********************************************************************
  *  splitQuestionName into questionname and passagename
  *********************************************************************/
-var splitQuestionName = function (acc, curr) {
+var splitQuestionName = function (acc, curr, arrIndex) {
     if (curr.questionname !== undefined && curr.questionname !== ''){
         var pqname = curr.questionname.replace(/\s/g, ''); //remove all spaces
         curr.questionname = pqname.replace(/passage\d+/i, '');
@@ -123,6 +125,7 @@ var splitQuestionName = function (acc, curr) {
     } else {
         curr.completedStatus.splitField.status = false;
         curr.completedStatus.splitField.message = 'WARNING: questionname field does not exist on this file!';
+        temporaryproblemReport += `${batch}|${acc.options.currentFile}|${arrIndex+indexOffset}|${curr.questionname}|WARNING: The 'questionname' field appears to be blank\n`;
     }
 };
 
@@ -131,11 +134,11 @@ var splitQuestionName = function (acc, curr) {
  *********************************************************************/
 var verifyQuestionTypeField = function (acc, curr, arrIndex) {
     if (curr.questiontype !== undefined && curr.questiontype.includes('long ansswer')) {
-        curr.completedStatus.questionTypeVerified.status = true;
-        curr.completedStatus.questionTypeVerified.message = 'NOTE: This file needed input fixed from "long ansswer" to "long answer"';
         // console.log(`In file ${acc.options.currentFile} on row ${arrIndex+indexOffset} it says ${curr.questiontype}`);
         curr.questiontype = 'long answer';
-    } else if (curr.questiontype !== undefined) {
+        curr.completedStatus.questionTypeVerified.status = true;
+        curr.completedStatus.questionTypeVerified.message = 'NOTE: This file needed input fixed from "long ansswer" to "long answer"';
+    } else {
         curr.completedStatus.questionTypeVerified.status = true;
         curr.completedStatus.questionTypeVerified.message = 'NOTE: This file didn\'t need any fixing.';
     }
@@ -147,14 +150,17 @@ var verifyQuestionTypeField = function (acc, curr, arrIndex) {
 var verifyPassageTextType = function (acc, curr, arrIndex) {
     if (curr.passagetexttype !== undefined && (curr.passagetexttype.toLowerCase().includes('c1') || curr.passagetexttype.toLowerCase().includes('c2') || curr.passagetexttype.toLowerCase().includes('c3') || curr.passagetexttype === '')) {
         curr.completedStatus.passageTextTypeVerified.status = true;
-        curr.completedStatus.passageTextTypeVerified.message = 'NOTE: This file is fine."';
-        // console.log(`In file ${acc.options.currentFile} on row ${arrIndex+indexOffset} it says ${curr.questiontype}`);
-        curr.questiontype = 'long answer';
-    } else if (curr.passagetexttype !== undefined && !curr.passagetexttype.toLowerCase().includes('c')) {
-        passagetexttypeLogReport += `${batch}|${acc.options.currentFile}|${arrIndex+indexOffset}|${curr.passagetexttype}|NOTE: This file did not conform with the expectations. They were not edited.\n`;
-        // curr.passagetexttype = ''; // 
+        curr.completedStatus.passageTextTypeVerified.message = 'NOTE: This file is fine.';
+    } else if (curr.passagetexttype === undefined) {
+        curr.completedStatus.passageTextTypeVerified.status = true;
+        curr.completedStatus.passageTextTypeVerified.message = 'NOTE: This field is undefined.';
+    } else {
+        passagetexttypeLogReport += `${batch}|${acc.options.currentFile}|${arrIndex + indexOffset}|${curr.passagetexttype}|NOTE: This passagetexttype was set to a non-standard value. It was not changed.\n`;
+        temporaryproblemReport += `${batch}|${acc.options.currentFile}|${arrIndex + indexOffset}|${curr.passagetexttype}|NOTE: This passagetexttype was set to a non-standard value. It was not changed.\n`;
+        
+        // curr.passagetexttype = ''; // Ted Said don't edit this field, just log it. Don't include undefined or blank values in the report.
         curr.completedStatus.passageTextTypeVerified.status = false;
-        curr.completedStatus.passageTextTypeVerified.message = 'WARNING: This file has a value that is not blank and is missing an identifier (Expected \'C\' somewhere).';
+        curr.completedStatus.passageTextTypeVerified.message = `WARNING: passagetexttype was set to a non-standard value. passagetexttype = ${curr.passagetexttype}`;
     }
 };
 
@@ -209,6 +215,11 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $) {
             set: () => {}
         },
         definitions: {
+            exists: false,
+            object: new Object(),
+            set: () => {}
+        },
+        passageReplacement: {
             exists: false,
             object: new Object(),
             set: () => {}
@@ -271,6 +282,13 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $) {
                 return $(ele);
             }
         }).first();
+        if (gs.passage.exists === false) {
+            if (gs.instructions.object.nextAll().filter('p').last().text().toLowerCase().includes('write a response to each of the prompts below')) {
+                // console.log(gs.instructions.object.nextAll().filter('p').last().text());
+                findPassage = gs.instructions.object.nextAll().filter('p').last();
+                gs.passage.exists = true;
+            }
+        }
         gs.passage.object = findPassage;
         return findPassage;  
     };
@@ -290,7 +308,6 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $) {
         return findDefinitions;
     };
     gs.definitions.set();
-    
 
     return gs;
 };
@@ -301,15 +318,23 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $) {
 var replaceAudioTag = function (acc, curr, arrIndex, $, gs) {
     var audioTags = $('audio');
     if (audioTags.length > 1) {
+        // console.log(audioTags.length);
         curr.completedStatus.audioFileEditComplete.status = false;
         curr.completedStatus.audioFileEditComplete.message = 'ERR0R: This row had more than one audio file!';
-        audioTags.forEach((element) => {
-            audioFilesLogReport += `${batch}|${acc.options.currentFile}|${arrIndex+indexOffset}|${element.attr('src')}|WARNING: This file has more than one audio tag!\n`;
-        });
+        if (audioTags.length === 2) {
+            curr.audiofilelink1 = audioTags.first().attr('src');
+            curr.audiofilelink2 = audioTags.last().attr('src');
+            audioFilesLogReport += `${batch}|${acc.options.currentFile}|${arrIndex+indexOffset}|${curr.audiofilelink1}|IMPORTANT NOTE: This file has more than one audio tag!\n`;
+            audioFilesLogReport += `${batch}|${acc.options.currentFile}|${arrIndex+indexOffset}|${curr.audiofilelink2}|IMPORTANT NOTE: This file has more than one audio tag!\n`;
+            audioTags.first().replaceWith(uniqueStringForAudioTags);
+            audioTags.last().replaceWith(uniqueStringForAudioTags);
+            curr.completedStatus.audioFileEditComplete.status = true;
+            curr.completedStatus.audioFileEditComplete.message = 'NOTE: There were two audio files in this row. Handling both.';
+        }
     } else if (audioTags.length === 1) {
         var audioSrc = audioTags.attr('src');
-        audioFilesLogReport += `${batch}|${acc.options.currentFile}|${arrIndex+indexOffset}|${audioSrc}|Success!\n`;
-        audioTags.replace(uniqueStringForAudioTags);
+        audioFilesLogReport += `${batch}|${acc.options.currentFile}|${arrIndex+indexOffset}|${audioSrc}|NOTE: Success!\n`;
+        audioTags.replaceWith(uniqueStringForAudioTags);
         curr.completedStatus.audioFileEditComplete.status = true;
         curr.completedStatus.audioFileEditComplete.message = `NOTE: This row's audio source is: ${audioSrc}`;
     } else if (audioTags.length < 1) {
@@ -333,6 +358,16 @@ var replaceText = function (acc, curr, arrIndex, $, gs) {
     var wExists = gs.warmup.exists;
     var passage = gs.passage.set();
     var pExists = gs.passage.exists;
+
+    if (!iExists && wExists && pExists) {
+        temporaryproblemReport += `${batch}|${acc.options.currentFile}|${arrIndex+indexOffset}||ERR0R: This HTML is missing its <h1>Instructions</h1>.\n`;
+    } else if (iExists && wExists && !pExists) {
+        temporaryproblemReport += `${batch}|${acc.options.currentFile}|${arrIndex+indexOffset}||ERR0R: Could not find <h2>Passage</h2>.\n`;
+    } else if (iExists && !wExists&& !pExists) {
+        temporaryproblemReport += `${batch}|${acc.options.currentFile}|${arrIndex+indexOffset}||ERR0R: Could not find a <h2>Warm-up</h2> or an <h2>Passage</h2>.\n`;
+    } else if (!iExists && !wExists && !pExists) {
+        temporaryproblemReport += `${batch}|${acc.options.currentFile}|${arrIndex+indexOffset}||ERR0R: This HTML is missing all vital landmarks and could not be edited.\n`;
+    }
 
     $('img').remove(); // They want all images removed. Any they want added in will be done in post-processing.
 
@@ -430,6 +465,65 @@ var addDivsAround = function (acc, curr, arrIndex, $, gs) {
 };
 
 /********************************************************************
+ * 
+ *********************************************************************/
+var htmlPostProcessing = function (acc, curr, arrIndex, $, gs) {
+    var instructions = gs.instructions.set();
+    var iExists = gs.instructions.exists;
+    var warmup = gs.warmup.set();
+    var wExists = gs.warmup.exists;
+    var definitions = gs.definitions.set();
+    var dExists = gs.definitions.exists;
+    var passage = gs.passage.set();
+    var pExists = gs.passage.exists;
+
+    var passageReplacement;
+    var prExists = false;
+
+    var failed = {
+        deletes: !curr.completedStatus.passageDelete.status, // sets to true if the process failed
+        classes: !curr.completedStatus.passageClass.status, 
+        dDivs: !curr.completedStatus.passageDivDefinition.status,
+        pDivs: !curr.completedStatus.passageDivPassage.status
+    };
+
+    if (failed.deletes) {
+        if (iExists && !wExists && !pExists) {
+            console.log(`${`in ${acc.options.currentFile} on row ${arrIndex+indexOffset}`.padEnd(50,'.')} Exists: Instructions | Doesn't: Warm-up, Passage`);
+            if (false) {
+                null;
+            }
+            if ( instructions.nextAll().filter('p').last().text().toLowerCase().includes('write a response to each of the prompts below') ) {
+                console.log(instructions.nextAll().filter('p').last().text());
+                passageReplacement = instructions.nextAll().filter('p').last();
+                prExists = true;
+                null;
+            }
+        } else if (iExists && wExists && !pExists) {
+            console.log(`${`in ${acc.options.currentFile} on row ${arrIndex+indexOffset}`.padEnd(50,'.')} Exists: Instructions, Warm-up | Doesn't: Passage`);
+            null;
+        } else if (iExists && !wExists && pExists) {
+            console.log(`${`in ${acc.options.currentFile} on row ${arrIndex+indexOffset}`.padEnd(50,'.')} Exists: Instructions, Passage | Doesn't: Warm-up`);
+            null;
+        } else {
+            console.log(`${`in ${acc.options.currentFile} on row ${arrIndex+indexOffset}`.padEnd(50, '.')} deletes failed and there were uncaught exceptions.`);
+        }
+        if (prExists) {
+
+        }
+    }
+    // if (failed.classes) {
+    //     null;
+    // }
+    // if (failed.dDivs) {
+    //     null;
+    // }
+    // if (failed.pDivs) {
+    //     null;
+    // }
+};
+
+/********************************************************************
  * Edit passagetext: Fix Cheerio
  * DESCRIPTION: Cheerio thinks its so smart and needs to add stuff we
  *              don't want in both html and xml mode. This function
@@ -464,10 +558,11 @@ var editPassageText = function (acc, curr, arrIndex) {
         var $ = cheerio.load(curr.passagetext, {xmlMode: true}); // Declare Cheerio Object
         var gs = setGlobalSelectors(acc, curr, arrIndex, $);
         replaceAudioTag(acc, curr, arrIndex, $, gs);
-        // TODO And Also create a check for image tags doing likewise if there is enough time.
         replaceText(acc, curr, arrIndex, $, gs); // "Passage Content to Delete" Section
         addClassDefinitions(acc, curr, arrIndex, $, gs); // "Adding Class Definitions"
         addDivsAround(acc, curr, arrIndex, $, gs); // "Add Divs" Section
+        // TODO post-process html to catch anything that fits certain parameters
+        htmlPostProcessing(acc, curr, arrIndex, $, gs);
         curr.passagetext = $.html();
         fixCheerio(acc, curr);
         curr.completedStatus.cheerioCanReadPassage.status = true;
@@ -550,16 +645,15 @@ var reducer = function (acc, curr, i) {
             message: 'Default Message'
         }
     };
+    curr.thisFileNameIs = acc.options.currentFile;
     checkIdField(acc, curr, i);
     updateQuestionCanDo(acc, curr, i);
     deleteKeys(acc, curr);
-    splitQuestionName(acc, curr);
-    // TODO verify passagetexttype make sure it has C in it
+    splitQuestionName(acc, curr, i);
     verifyPassageTextType(acc, curr, i);
     verifyQuestionTypeField(acc, curr, i);
     editPassageText(acc, curr, i);
     everyTaskSuccessful(acc, curr);
-    curr.thisFileNameIs = acc.options.currentFile;
     acc.push(curr);
     acc.options.counter++;
     return acc;
@@ -697,7 +791,8 @@ function main() {
             'passagetexttype', 'passagetype', 'passageaudiotranscript', 'passagename',
             'questionname', 'questioncando', 'questiontext', 'questionlevelfeedback',
             'questiontype', 'questionaudiotranscript', 'answertext1', 'answertext2',
-            'answertext3', 'answertext4', 'answertext5', 'answertext6'
+            'answertext3', 'answertext4', 'answertext5', 'answertext6', 'audiofilelink1', 
+            'audiofilelink2'
         ],
         initAcc: [],
         updateCanDoField: false,
@@ -716,7 +811,7 @@ function main() {
         var newFileName = setNewFileName(file); // renames files to new format
         // newFileName = file; // Uncomment if you want ot keep the original filename
         appendErrorLog(reducedCSV, allPassed); // Write Errors from each row to error log
-        writeFile(outputDirectory, newFileName, csvOutput); // Write the File
+        // writeFile(outputDirectory, newFileName, csvOutput); // Write the File
         callback(null);
     };
     // This is where the cycling really happens:
@@ -728,6 +823,7 @@ function main() {
             writeFile(od_foundErrors, 'audioFileReport.csv', audioFilesLogReport); // A record of all
             writeFile(od_foundErrors, 'questioncandoReport.csv', questioncandoLogReport); // A record of all
             writeFile(od_foundErrors, 'passagetexttypeReport.csv', passagetexttypeLogReport); // A record of all
+            writeFile(od_foundErrors, 'temporaryproblemReport.csv', temporaryproblemReport); // A record of all
         }
     });
     // DONE

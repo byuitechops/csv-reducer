@@ -102,37 +102,19 @@ class ModifiedCSV {
         }
     }
     // methods
-    optionsChecker(options) {
-        return optionsChecker(options);
-    }
-    removeBOM(stringWithBOM) {
-        return removeBOM(stringWithBOM);
-    }
-    parseCSV(csvToParse) {
-        return parseCSV(csvToParse);
-    }
-    csvReducer(csvToReduce, reducerFunction) {
-        return csvReducer(csvToReduce, this.options, reducerFunction);
-    }
-    limitHeaders(parsedCSV) {
-        return limitHeaders(parsedCSV, this.options);
-    }
-    formatCSV(csvToFormat) {
-        return formatCSV(csvToFormat, this.options);
-    }
+    optionsChecker(options) {return optionsChecker(options);}
+    removeBOM(stringWithBOM) {return removeBOM(stringWithBOM);}
+    parseCSV(csvToParse) {return parseCSV(csvToParse);}
+    csvReducer(csvToReduce, reducerFunction) {return csvReducer(csvToReduce, this.options, reducerFunction);}
+    limitHeaders(parsedCSV) {return limitHeaders(parsedCSV, this.options);}
+    formatCSV(csvToFormat) {return formatCSV(csvToFormat, this.options);}
     // setters
-    setOptions(options) {
-        return optionsChecker(options);
-    }
+    setOptions(options) {return optionsChecker(options);}
     // setInitialCSV(initialCSV){this.initialCSV = removeBOM(initialCSV);}
     // setParsedCSV(parsedCSV){this.parsedCSV = parsedCSV}
     // getters
-    getFormattedCSV() {
-        return this.newCSV;
-    }
-    getReducedCSV() {
-        return this.reducedCSV;
-    }
+    getFormattedCSV() {return this.newCSV;}
+    getReducedCSV() {return this.reducedCSV;}
 }
 
 /********************************************************************
