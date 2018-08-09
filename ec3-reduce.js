@@ -16,9 +16,10 @@ var errorHeader = '\nThe Following Files Had One or More Error:\n';
 var errorBody = '\n';
 // Optional Reports:
 var batch = 'Writing'; // set batch here
-var audioFilesLogReport = 'batch|filename|row|value|message\n'; // ___Report += `${}|${}|${}|${}|${}\n`
+var audioFilesLogReport = 'batch|filename|row|value|message\n'; // inferredHTMLReport += `${}|${}|${}|${}|${}\n`
 var questioncandoLogReport = 'batch|filename|row|value|message\n';
 var passagetexttypeLogReport = 'batch|filename|row|value|message\n';
+var inferredHTMLReport = 'batch|filename|row|value|message\n';
 var temporaryproblemReport = 'batch|filename|row|value|message\n';
 // Other Variables
 var uniqueString = '<div class="addclosingdiv">heylookherethisisasentancethatwillhopefullyneverappearinanyfilefromheretotherestofforeverinanyec3courseyay</div>';
@@ -262,9 +263,12 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $) {
                 return $(ele);
             } else if ($(ele).text().toLowerCase().includes('passage') && ele.name === 'h3') {
                 // console.log(`${acc.options.currentFile} has ${ele.name} tags in one of its passage tags on row ${arrIndex+indexOffset}.`);
-                $(ele).replaceWith('<h2>Passage</h2>');
-                gs.passage.exists = true;
-                return $(ele);
+                $(ele).replaceWith($('<h2>Passage</h2>'));
+                if ($(ele).text().toLowerCase().includes('passage') && ele.name === 'h2') {
+                    console.log('found');
+                    gs.passage.exists = true;
+                    return $(ele);
+                }
             }
         }).first();
         // If can't find html-landmark or variations for Passage, infer where the Passage section starts using methods agreed upon with Ted.
@@ -297,14 +301,15 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $) {
                     if ( $(ele).text().toLowerCase().includes('example') ) {
                         psExists = true;
                         return $(ele);
-                    }
-                }).first();
+                    } 
+                }).first().prev();
                 if (psExists) {
                     let nwExists = false;
                     let newWarmup;
-                    pstrong.prev().before('<h2 class="warmuphere">Warm-up 99362</h2>');
+                    pstrong.before( $('<h2>Warm-up 99362</h2>') );
                     newWarmup = $('h2').filter( (i, ele) => {
-                        if ($(ele).hasClass('warmuphere') || $(ele).text().toLowerCase().includes('warm-up')) {
+                        if ($(ele).text().toLowerCase().includes('warm-up')) {
+                            // console.log(`In ${acc.options.currentFile} on row ${arrIndex+indexOffset} it says ${$(ele).html()}`);
                             nwExists = true;
                             return $(ele);
                         }
@@ -312,8 +317,7 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $) {
                     if (nwExists) {
                         gs.warmup.exists = true;
                         findWarmup = newWarmup;
-                        // console.log(`In ${acc.options.currentFile} on row ${arrIndex+indexOffset} warmup.exists qualifications met`);
-                    } 
+                    }
                 } 
             } else if (gs.instructions.exists && !gs.passage.exists) {
                 let psExists = false;
@@ -322,13 +326,15 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $) {
                         psExists = true;
                         return $(ele);
                     }
-                }).first();
+                }).first().prev();
+
                 if (psExists) {
                     let nwExists = false;
                     let newWarmup;
-                    pstrong.prev().before('<h2 class="warmuphere">Warm-up 89123</h2>');
+                    pstrong.before($('<h2>Warm-up 89123</h2>'));
                     newWarmup = $('h2').filter( (i, ele) => {
-                        if ($(ele).hasClass('warmuphere') || $(ele).text().toLowerCase().includes('warm-up')) {
+                        // console.log(`In ${acc.options.currentFile} on row ${arrIndex+indexOffset} it says ${$(ele).html()}`);
+                        if ($(ele).text().toLowerCase().includes('warm-up')) {
                             nwExists = true;
                             return $(ele);
                         }
@@ -341,6 +347,7 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $) {
                 } 
             }
         }
+        // console.log(`In ${acc.options.currentFile} on row ${arrIndex+indexOffset} it says ${findWarmup.html()}`);
         gs.warmup.object = findWarmup;
         return findWarmup; 
     };
@@ -415,12 +422,12 @@ var replaceText = function (acc, curr, arrIndex, $, gs) {
 
     if (iExists && wExists) {
         instructions.nextUntil(warmup).add(instructions).add(warmup.nextUntil(passage).not($('p').has('strong'))).remove('*');
-        warmup.before('<h2>Definitions</h2>');
+        warmup.before($('<h2>Definitions</h2>'));
         warmup.remove();
         curr.completedStatus.passageDelete.status = true;
     } else if (iExists && pExists) {
         instructions.nextUntil(passage).add(instructions).not($('p').has('strong')).remove('*');
-        $('p').has('strong').first().before('<h2>Definitions</h2>');
+        $('p').has('strong').first().before($('<h2>Definitions</h2>'));
         curr.completedStatus.passageDelete.status = true;
         curr.completedStatus.passageDelete.message = 'NOTE: first h2 tag is <h2>Passage</h2>';
     } else if (iExists & !wExists && !pExists) {
@@ -500,8 +507,9 @@ var addDivsAround = function (acc, curr, arrIndex, $, gs) {
     var pExists = gs.passage.exists;
     if (gs.warmup.initExists) { // make sure gs.warup.exists isn't updated between the replaceText() function and here.
         if (dExists) {
-            definitions.before($('<div class="definitions-container">'));
-            definitions.nextUntil(passage).last().after($(uniqueString));
+            definitions.before( $('<div class="definitions-container"></div>') );
+            var dcontain = $('.definitions-container').first();
+            definitions.nextUntil(passage).prependTo(dcontain);
             curr.completedStatus.passageDivDefinition.status = true;
         } else {
             curr.completedStatus.passageDivDefinition.status = false;
@@ -513,15 +521,16 @@ var addDivsAround = function (acc, curr, arrIndex, $, gs) {
     } 
     // TODO Find out why uniqueString isn't being added after at the end of passage. or rewrite to fix all other problems.
     if (pExists){
-        passage.before($('<div class="passage-container">'));
-        if (passage.nextAll().last().text() === '') {
+        passage.before($('<div class="passage-container"></div>'));
+        var pcontain = $('.passage-container');
+        if (passage.nextAll().text() === '') {
+            if (acc.options.currentFile.includes('FP_W3_DE_T2_')) {console.log(`in ${acc.options.currentFile} on row ${arrIndex+indexOffset} it says ${$(passage.nextAll().last())}`);}
+            pcontain.prepend(passage);
             // console.log(`in ${acc.options.currentFile} on row ${arrIndex+indexOffset} it says ${passage.text()}`);
-            passage.after($(uniqueString));
             curr.completedStatus.passageDivPassage.status = true;
         } else {
-            passage.nextAll().last().after($(uniqueString));
+            pcontain.prepend(passage.nextAll());
             curr.completedStatus.passageDivPassage.status = true;
-            if (acc.options.currentFile.includes('FP_W3_DE_T2_')) {console.log(`in ${acc.options.currentFile} on row ${arrIndex+indexOffset} it says ${$(passage.nextAll().last())}`);}
         }
     } else {
         curr.completedStatus.passageDivPassage.status = true;
@@ -539,24 +548,6 @@ var addDivsAround = function (acc, curr, arrIndex, $, gs) {
  * RETURNS: void
  *********************************************************************/
 var fixCheerio = function (acc, curr, arrIndex, $, gs) {
-    var definitions = gs.definitions.set();
-    var dExists = gs.definitions.exists;
-    var passage = gs.passage.set();
-    var pExists = gs.passage.exists;
-    var regexForUniqueString = new RegExp(uniqueString, 'g');
-    if (dExists || pExists) {
-        if (curr.passagetext.includes(uniqueString)) {
-            curr.passagetext = curr.passagetext.replace(regexForUniqueString, '</div>');
-            curr.completedStatus.fixCheerioAddCloseDiv.status = true;
-        } else {
-            // TODO Find out why this signals on file "FP_W3_DE_T2_" rows 12-16. It likely has to do with addDivsAround() Function. 
-            curr.completedStatus.fixCheerioAddCloseDiv.status = false;
-            curr.completedStatus.fixCheerioAddCloseDiv.message = 'ERR0R: "<div class="definitions-container">" AND "<div class="passage-container">" HAVE NO "</div>" !!!';
-        }
-    } else {
-        curr.completedStatus.fixCheerioAddCloseDiv.status = true;
-        curr.completedStatus.fixCheerioAddCloseDiv.message = 'NOTE: "Can\'t fix something that doesn\'t exist.';
-    }
     if (curr.passagetext.includes('</link>')){
         curr.passagetext = curr.passagetext.replace(/<\/link>/g, '');
         curr.completedStatus.fixCheerioRemoveCloseLink.status = true;
@@ -643,10 +634,6 @@ var reducer = function (acc, curr, i) {
             message: 'Default Message'
         },
         passageDivPassage: {
-            status: false,
-            message: 'Default Message'
-        },
-        fixCheerioAddCloseDiv: {
             status: false,
             message: 'Default Message'
         },
@@ -838,6 +825,7 @@ function main() {
             writeFile(od_foundErrors, 'audioFileReport.csv', audioFilesLogReport); // A record of all
             writeFile(od_foundErrors, 'questioncandoReport.csv', questioncandoLogReport); // A record of all
             writeFile(od_foundErrors, 'passagetexttypeReport.csv', passagetexttypeLogReport); // A record of all
+            writeFile(od_foundErrors, 'inferredHTMLReport.csv', inferredHTMLReport); // A record of all
             writeFile(od_foundErrors, 'temporaryproblemReport.csv', temporaryproblemReport); // A record of all
         }
     });
