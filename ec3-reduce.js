@@ -25,7 +25,7 @@ var uniqueString = '<div class="addclosingdiv">heylookherethisisasentancethatwil
 var uniqueStringForAudioTags = '[[Replace audio file here filename.mp3]]';
 // const targetDirectory = './csv-tests/ec3/ec3-production/ec3-csvs-originals/R/'; // for production
 var targetDirectory = './csv-tests/ec3/ec3-production/ec3-csvs-outputs/ec3-csvs-no-errors/I_W/'; // for production
-var od_noErrors = './csv-tests/ec3/ec3-production/ec3-csvs-outputs/ec3-csvs-no-errors/W/'; // for production
+var od_noErrors = './csv-tests/ec3/ec3-production/ec3-csvs-outputs/ec3-csvs-no-errors/'; // for production
 var od_foundErrors = './csv-tests/ec3/ec3-production/ec3-csvs-outputs/ec3-csvs-found-errors/'; // for production
 var indexOffset = 2;
 var counter = 0;
@@ -156,7 +156,7 @@ var verifyPassageTextType = function (acc, curr, arrIndex) {
         curr.completedStatus.passageTextTypeVerified.message = 'NOTE: This field is undefined.';
     } else {
         passagetexttypeLogReport += `${batch}|${acc.options.currentFile}|${arrIndex + indexOffset}|${curr.passagetexttype}|NOTE: This passagetexttype was set to a non-standard value. It was not changed.\n`;
-        temporaryproblemReport += `${batch}|${acc.options.currentFile}|${arrIndex + indexOffset}|${curr.passagetexttype}|NOTE: This passagetexttype was set to a non-standard value. It was not changed.\n`;
+        // temporaryproblemReport += `${batch}|${acc.options.currentFile}|${arrIndex + indexOffset}|${curr.passagetexttype}|NOTE: This passagetexttype was set to a non-standard value. It was not changed.\n`;
         
         // curr.passagetexttype = ''; // Ted Said don't edit this field, just log it. Don't include undefined or blank values in the report.
         curr.completedStatus.passageTextTypeVerified.status = false;
@@ -248,21 +248,6 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $) {
     gs.instructions.set();
     // if (!gs.instructions.exists) {console.log(`${gs.instructions.exists} + ${counter++} + ${acc.options.currentFile} + row ${arrIndex+indexOffset}`);}
     
-    // Finding <h2>Warm-up</h2> and exceptions
-    gs.warmup.set = () => {
-        gs.warmup.exists = false;
-        var findWarmup = $('h2').filter((index, ele) => {
-            if (($(ele).text().toLowerCase().includes('warm') || $(ele).text().toLowerCase().includes('wam')) && $(ele).text().toLowerCase().includes('up')) {
-                gs.warmup.exists = true;
-                return $(ele);
-            }
-        }).first();
-        if (gs.warmup.exists) {
-            gs.warmup.object = findWarmup;
-            return findWarmup; 
-        }
-    };
-    gs.warmup.set();
     
     // Finding <h2>Passage</h2> and exceptions
     gs.passage.set = () => {
@@ -282,7 +267,8 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $) {
                 return $(ele);
             }
         }).first();
-        if (gs.passage.exists === false) {
+        // If can't find html-landmark or variations for Passage, infer where the Passage section starts using methods agreed upon with Ted.
+        if ( gs.passage.exists === false) {
             if (gs.instructions.object.nextAll().filter('p').last().text().toLowerCase().includes('write a response to each of the prompts below')) {
                 // console.log(gs.instructions.object.nextAll().filter('p').last().text());
                 findPassage = gs.instructions.object.nextAll().filter('p').last();
@@ -290,11 +276,77 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $) {
             }
         }
         gs.passage.object = findPassage;
-        return findPassage;  
+        return findPassage;
     };
     gs.passage.set();
     
-
+    // Finding <h2>Warm-up</h2> and exceptions
+    gs.warmup.set = () => {
+        gs.warmup.exists = false;
+        var findWarmup = $('h2').filter((index, ele) => {
+            if ( ($(ele).text().toLowerCase().includes('warm') || $(ele).text().toLowerCase().includes('wam')) && $(ele).text().toLowerCase().includes('up')) {
+                gs.warmup.exists = true;
+                return $(ele);
+            }
+        }).first();
+        // If can't find html-landmark or variations for Warm-up, infer where the Warm-up section starts using methods agreed upon with Ted.
+        if (gs.warmup.exists === false) {
+            if ( gs.instructions.exists && gs.passage.exists ) {
+                let psExists = false;
+                let pstrong = gs.instructions.object.nextUntil(gs.passage.object).filter('p').has('strong').filter( (i, ele) => {
+                    if ( $(ele).text().toLowerCase().includes('example') ) {
+                        psExists = true;
+                        return $(ele);
+                    }
+                }).first();
+                if (psExists) {
+                    let nwExists = false;
+                    let newWarmup;
+                    pstrong.prev().before('<h2 class="warmuphere">Warm-up 99362</h2>');
+                    newWarmup = $('h2').filter( (i, ele) => {
+                        if ($(ele).hasClass('warmuphere') || $(ele).text().toLowerCase().includes('warm-up')) {
+                            nwExists = true;
+                            return $(ele);
+                        }
+                    }).first();
+                    if (nwExists) {
+                        gs.warmup.exists = true;
+                        findWarmup = newWarmup;
+                        // console.log(`In ${acc.options.currentFile} on row ${arrIndex+indexOffset} warmup.exists qualifications met`);
+                    } 
+                } 
+            } else if (gs.instructions.exists && !gs.passage.exists) {
+                let psExists = false;
+                let pstrong = gs.instructions.object.nextAll().filter('p').has('strong').filter( (i, ele) => {
+                    if ( $(ele).text().toLowerCase().includes('example') ) {
+                        psExists = true;
+                        return $(ele);
+                    }
+                }).first();
+                if (psExists) {
+                    let nwExists = false;
+                    let newWarmup;
+                    pstrong.prev().before('<h2 class="warmuphere">Warm-up 89123</h2>');
+                    newWarmup = $('h2').filter( (i, ele) => {
+                        if ($(ele).hasClass('warmuphere') || $(ele).text().toLowerCase().includes('warm-up')) {
+                            nwExists = true;
+                            return $(ele);
+                        }
+                    }).first();
+                    if (nwExists) {
+                        gs.warmup.exists = true;
+                        findWarmup = newWarmup;
+                        // console.log(`In ${acc.options.currentFile} on row ${arrIndex+indexOffset} warmup.exists qualifications met`);
+                    }
+                } 
+            }
+        }
+        gs.warmup.object = findWarmup;
+        return findWarmup; 
+    };
+    gs.warmup.set();
+    gs.warmup.initExists = gs.warmup.exists; // addDivsAround() function needs to know if warmup existed initially
+    
     // Finding <h2>Definitions</h2>
     gs.definitions.set = () => {
         gs.definitions.exists = false;
@@ -359,16 +411,6 @@ var replaceText = function (acc, curr, arrIndex, $, gs) {
     var passage = gs.passage.set();
     var pExists = gs.passage.exists;
 
-    if (!iExists && wExists && pExists) {
-        temporaryproblemReport += `${batch}|${acc.options.currentFile}|${arrIndex+indexOffset}||ERR0R: This HTML is missing its <h1>Instructions</h1>.\n`;
-    } else if (iExists && wExists && !pExists) {
-        temporaryproblemReport += `${batch}|${acc.options.currentFile}|${arrIndex+indexOffset}||ERR0R: Could not find <h2>Passage</h2>.\n`;
-    } else if (iExists && !wExists&& !pExists) {
-        temporaryproblemReport += `${batch}|${acc.options.currentFile}|${arrIndex+indexOffset}||ERR0R: Could not find a <h2>Warm-up</h2> or an <h2>Passage</h2>.\n`;
-    } else if (!iExists && !wExists && !pExists) {
-        temporaryproblemReport += `${batch}|${acc.options.currentFile}|${arrIndex+indexOffset}||ERR0R: This HTML is missing all vital landmarks and could not be edited.\n`;
-    }
-
     $('img').remove(); // They want all images removed. Any they want added in will be done in post-processing.
 
     if (iExists && wExists) {
@@ -413,14 +455,25 @@ var addClassDefinitions = function (acc, curr, arrIndex, $, gs) {
     if (!dExists) {
         // console.log($('h2').first().text());
     }
-    
+    var pstrong;
+    var pem;
     if (dExists && pExists) {
-        var pstrong = definitions.nextUntil(passage).filter('p').has('strong');
-        var pem = definitions.nextUntil(passage).filter('p').has('em');
+        pstrong = definitions.nextUntil(passage).filter('p').has('strong');
+        pem = definitions.nextUntil(passage).filter('p').has('em');
         pstrong.addClass('vocab-definition');
         pem.removeClass('vocab-definition');
         pem.addClass('vocab-example');
         curr.completedStatus.passageClass.status = true;
+    } else if (dExists && !pExists) {
+        pstrong = definitions.nextAll().filter('p').has('strong');
+        pem = definitions.nextAll().filter('p').has('em');
+        pstrong.addClass('vocab-definition');
+        pem.removeClass('vocab-definition');
+        pem.addClass('vocab-example'); 
+        curr.completedStatus.passageClass.status = true;
+    } else if (!gs.warmup.exists) {
+        curr.completedStatus.passageClass.status = true;
+        curr.completedStatus.passageClass.message = 'Can\'t add classes to definitions section if there was no definitions section to begin with.';
     } else {
         curr.completedStatus.passageClass.status = false;
         if (!dExists && pExists) {
@@ -445,82 +498,35 @@ var addDivsAround = function (acc, curr, arrIndex, $, gs) {
     var dExists = gs.definitions.exists;
     var passage = gs.passage.set();
     var pExists = gs.passage.exists;
-
-    if (dExists) {
-        definitions.before($('<div class="definitions-container">'));
-        definitions.nextUntil(passage).last().after($(uniqueString));
-        curr.completedStatus.passageDivDefinition.status = true;
+    if (gs.warmup.initExists) { // make sure gs.warup.exists isn't updated between the replaceText() function and here.
+        if (dExists) {
+            definitions.before($('<div class="definitions-container">'));
+            definitions.nextUntil(passage).last().after($(uniqueString));
+            curr.completedStatus.passageDivDefinition.status = true;
+        } else {
+            curr.completedStatus.passageDivDefinition.status = false;
+            curr.completedStatus.passageDivDefinition.message = 'ERR0R: Couldn\'t find "<h2>Definitions</h2>" (addDivsAround Function)';
+        }
     } else {
-        curr.completedStatus.passageDivDefinition.status = false;
-        curr.completedStatus.passageDivDefinition.message = 'ERR0R: Couldn\'t find "<h2>Definitions</h2>" (addDivsAround Function)';
-    }
+        curr.completedStatus.passageDivDefinition.status = true;
+        curr.completedStatus.passageDivDefinition.message = 'NOTE: Can\'t add divs around "<h2>Definitions</h2>" if that section never existed (addDivsAround Function)';
+    } 
+    // TODO Find out why uniqueString isn't being added after at the end of passage. or rewrite to fix all other problems.
     if (pExists){
         passage.before($('<div class="passage-container">'));
-        passage.nextAll().last().after($(uniqueString));
-        curr.completedStatus.passageDivPassage.status = true;
-    } else {
-        curr.completedStatus.passageDivPassage.status = false;
-        curr.completedStatus.passageDivPassage.message = 'ERR0R: Couldn\'t find "<h2>Passage</h2>" (addDivsAround Function)';
-    }
-};
-
-/********************************************************************
- * 
- *********************************************************************/
-var htmlPostProcessing = function (acc, curr, arrIndex, $, gs) {
-    var instructions = gs.instructions.set();
-    var iExists = gs.instructions.exists;
-    var warmup = gs.warmup.set();
-    var wExists = gs.warmup.exists;
-    var definitions = gs.definitions.set();
-    var dExists = gs.definitions.exists;
-    var passage = gs.passage.set();
-    var pExists = gs.passage.exists;
-
-    var passageReplacement;
-    var prExists = false;
-
-    var failed = {
-        deletes: !curr.completedStatus.passageDelete.status, // sets to true if the process failed
-        classes: !curr.completedStatus.passageClass.status, 
-        dDivs: !curr.completedStatus.passageDivDefinition.status,
-        pDivs: !curr.completedStatus.passageDivPassage.status
-    };
-
-    if (failed.deletes) {
-        if (iExists && !wExists && !pExists) {
-            console.log(`${`in ${acc.options.currentFile} on row ${arrIndex+indexOffset}`.padEnd(50,'.')} Exists: Instructions | Doesn't: Warm-up, Passage`);
-            if (false) {
-                null;
-            }
-            if ( instructions.nextAll().filter('p').last().text().toLowerCase().includes('write a response to each of the prompts below') ) {
-                console.log(instructions.nextAll().filter('p').last().text());
-                passageReplacement = instructions.nextAll().filter('p').last();
-                prExists = true;
-                null;
-            }
-        } else if (iExists && wExists && !pExists) {
-            console.log(`${`in ${acc.options.currentFile} on row ${arrIndex+indexOffset}`.padEnd(50,'.')} Exists: Instructions, Warm-up | Doesn't: Passage`);
-            null;
-        } else if (iExists && !wExists && pExists) {
-            console.log(`${`in ${acc.options.currentFile} on row ${arrIndex+indexOffset}`.padEnd(50,'.')} Exists: Instructions, Passage | Doesn't: Warm-up`);
-            null;
+        if (passage.nextAll().last().text() === '') {
+            // console.log(`in ${acc.options.currentFile} on row ${arrIndex+indexOffset} it says ${passage.text()}`);
+            passage.after($(uniqueString));
+            curr.completedStatus.passageDivPassage.status = true;
         } else {
-            console.log(`${`in ${acc.options.currentFile} on row ${arrIndex+indexOffset}`.padEnd(50, '.')} deletes failed and there were uncaught exceptions.`);
+            passage.nextAll().last().after($(uniqueString));
+            curr.completedStatus.passageDivPassage.status = true;
+            if (acc.options.currentFile.includes('FP_W3_DE_T2_')) {console.log(`in ${acc.options.currentFile} on row ${arrIndex+indexOffset} it says ${$(passage.nextAll().last())}`);}
         }
-        if (prExists) {
-
-        }
+    } else {
+        curr.completedStatus.passageDivPassage.status = true;
+        curr.completedStatus.passageDivPassage.message = 'NOTE: According to updated standards, there is no guarentee for having a passage section. (addDivsAround Function)';
     }
-    // if (failed.classes) {
-    //     null;
-    // }
-    // if (failed.dDivs) {
-    //     null;
-    // }
-    // if (failed.pDivs) {
-    //     null;
-    // }
 };
 
 /********************************************************************
@@ -532,14 +538,24 @@ var htmlPostProcessing = function (acc, curr, arrIndex, $, gs) {
  * USE: in reduce function.Needs accumulator, and current item
  * RETURNS: void
  *********************************************************************/
-var fixCheerio = function (acc, curr) {
+var fixCheerio = function (acc, curr, arrIndex, $, gs) {
+    var definitions = gs.definitions.set();
+    var dExists = gs.definitions.exists;
+    var passage = gs.passage.set();
+    var pExists = gs.passage.exists;
     var regexForUniqueString = new RegExp(uniqueString, 'g');
-    if (curr.passagetext.includes(uniqueString)) {
-        curr.passagetext = curr.passagetext.replace(regexForUniqueString, '</div>');
-        curr.completedStatus.fixCheerioAddCloseDiv.status = true;
+    if (dExists || pExists) {
+        if (curr.passagetext.includes(uniqueString)) {
+            curr.passagetext = curr.passagetext.replace(regexForUniqueString, '</div>');
+            curr.completedStatus.fixCheerioAddCloseDiv.status = true;
+        } else {
+            // TODO Find out why this signals on file "FP_W3_DE_T2_" rows 12-16. It likely has to do with addDivsAround() Function. 
+            curr.completedStatus.fixCheerioAddCloseDiv.status = false;
+            curr.completedStatus.fixCheerioAddCloseDiv.message = 'ERR0R: "<div class="definitions-container">" AND "<div class="passage-container">" HAVE NO "</div>" !!!';
+        }
     } else {
-        curr.completedStatus.fixCheerioAddCloseDiv.status = false;
-        curr.completedStatus.fixCheerioAddCloseDiv.message = 'ERR0R: "<div class="definitions-container">" AND "<div class="passage-container">" HAVE NO "</div>" !!!';
+        curr.completedStatus.fixCheerioAddCloseDiv.status = true;
+        curr.completedStatus.fixCheerioAddCloseDiv.message = 'NOTE: "Can\'t fix something that doesn\'t exist.';
     }
     if (curr.passagetext.includes('</link>')){
         curr.passagetext = curr.passagetext.replace(/<\/link>/g, '');
@@ -561,10 +577,8 @@ var editPassageText = function (acc, curr, arrIndex) {
         replaceText(acc, curr, arrIndex, $, gs); // "Passage Content to Delete" Section
         addClassDefinitions(acc, curr, arrIndex, $, gs); // "Adding Class Definitions"
         addDivsAround(acc, curr, arrIndex, $, gs); // "Add Divs" Section
-        // TODO post-process html to catch anything that fits certain parameters
-        htmlPostProcessing(acc, curr, arrIndex, $, gs);
         curr.passagetext = $.html();
-        fixCheerio(acc, curr);
+        fixCheerio(acc, curr, arrIndex, $, gs);
         curr.completedStatus.cheerioCanReadPassage.status = true;
     } catch (err) {
         errorBody += `${acc.options.currentFile} ${arrIndex+indexOffset} '\n'${err}\n`;
@@ -725,6 +739,7 @@ var appendErrorLog = function (reducedCSV, allPassed) {
         // try{row.completedStatus.splitField.status = true;}catch(e){}                // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         try{row.completedStatus.keyRename.status = true;}catch(e){}                 // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         // try{row.completedStatus.questionTypeVerified.status = true;}catch(e){}     // Set Any Field to True to Ignore it in the Error Log, and vice versa.
+        try{row.completedStatus.passageTextTypeVerified.status = true;}catch(e){}     // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         // try{row.completedStatus.cheerioCanReadPassage.status = true;}catch(e){}     // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         // try{row.completedStatus.audioFileEditComplete.status = true;}catch(e){}     // Set Any Field to True to Ignore it in the Error Log, and vice versa.
         // try{row.completedStatus.passageDelete.status = true;}catch(e){}             // Set Any Field to True to Ignore it in the Error Log, and vice versa.
@@ -811,7 +826,7 @@ function main() {
         var newFileName = setNewFileName(file); // renames files to new format
         // newFileName = file; // Uncomment if you want ot keep the original filename
         appendErrorLog(reducedCSV, allPassed); // Write Errors from each row to error log
-        // writeFile(outputDirectory, newFileName, csvOutput); // Write the File
+        writeFile(outputDirectory, newFileName, csvOutput); // Write the File
         callback(null);
     };
     // This is where the cycling really happens:
