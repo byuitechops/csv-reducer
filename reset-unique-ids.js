@@ -9,7 +9,7 @@ const csvr = require('./main.js');
 const uuidv4 = require('uuid/v4');
 const uuidv5 = require('uuid/v5');
 const applicationNS = 'EC_POC';
-const targetDirectory = './csv-tests/ec3/ec3-production/ec3-csvs-originals/L/'; // for production
+const targetDirectory = './csv-tests/ec3/ec3-production/ec3-csvs-originals/S/'; // for production
 const outputDirectory = './csv-tests/ec3/ec3-production/ec3-csvs-outputs/ec3-csvs-no-errors/'; // for production
 
 const csvTools = csvr();

@@ -263,12 +263,9 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $) {
                 return $(ele);
             } else if ($(ele).text().toLowerCase().includes('passage') && ele.name === 'h3') {
                 // console.log(`${acc.options.currentFile} has ${ele.name} tags in one of its passage tags on row ${arrIndex+indexOffset}.`);
-                $(ele).replaceWith($('<h2>Passage</h2>'));
-                if ($(ele).text().toLowerCase().includes('passage') && ele.name === 'h2') {
-                    console.log('found');
-                    gs.passage.exists = true;
-                    return $(ele);
-                }
+                $(ele).replaceWith('<h2>Passage</h2>');
+                gs.passage.exists = true;
+                return $(ele);
             }
         }).first();
         // If can't find html-landmark or variations for Passage, infer where the Passage section starts using methods agreed upon with Ted.
@@ -301,15 +298,14 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $) {
                     if ( $(ele).text().toLowerCase().includes('example') ) {
                         psExists = true;
                         return $(ele);
-                    } 
-                }).first().prev();
+                    }
+                }).first();
                 if (psExists) {
                     let nwExists = false;
                     let newWarmup;
-                    pstrong.before( $('<h2>Warm-up 99362</h2>') );
+                    pstrong.prev().before('<h2 class="warmuphere">Warm-up 99362</h2>');
                     newWarmup = $('h2').filter( (i, ele) => {
-                        if ($(ele).text().toLowerCase().includes('warm-up')) {
-                            // console.log(`In ${acc.options.currentFile} on row ${arrIndex+indexOffset} it says ${$(ele).html()}`);
+                        if ($(ele).hasClass('warmuphere') || $(ele).text().toLowerCase().includes('warm-up')) {
                             nwExists = true;
                             return $(ele);
                         }
@@ -317,7 +313,8 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $) {
                     if (nwExists) {
                         gs.warmup.exists = true;
                         findWarmup = newWarmup;
-                    }
+                        // console.log(`In ${acc.options.currentFile} on row ${arrIndex+indexOffset} warmup.exists qualifications met`);
+                    } 
                 } 
             } else if (gs.instructions.exists && !gs.passage.exists) {
                 let psExists = false;
@@ -326,15 +323,13 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $) {
                         psExists = true;
                         return $(ele);
                     }
-                }).first().prev();
-
+                }).first();
                 if (psExists) {
                     let nwExists = false;
                     let newWarmup;
-                    pstrong.before($('<h2>Warm-up 89123</h2>'));
+                    pstrong.prev().before('<h2 class="warmuphere">Warm-up 89123</h2>');
                     newWarmup = $('h2').filter( (i, ele) => {
-                        // console.log(`In ${acc.options.currentFile} on row ${arrIndex+indexOffset} it says ${$(ele).html()}`);
-                        if ($(ele).text().toLowerCase().includes('warm-up')) {
+                        if ($(ele).hasClass('warmuphere') || $(ele).text().toLowerCase().includes('warm-up')) {
                             nwExists = true;
                             return $(ele);
                         }
@@ -347,7 +342,6 @@ var setGlobalSelectors = function (acc, curr, arrIndex, $) {
                 } 
             }
         }
-        // console.log(`In ${acc.options.currentFile} on row ${arrIndex+indexOffset} it says ${findWarmup.html()}`);
         gs.warmup.object = findWarmup;
         return findWarmup; 
     };
@@ -422,12 +416,12 @@ var replaceText = function (acc, curr, arrIndex, $, gs) {
 
     if (iExists && wExists) {
         instructions.nextUntil(warmup).add(instructions).add(warmup.nextUntil(passage).not($('p').has('strong'))).remove('*');
-        warmup.before($('<h2>Definitions</h2>'));
+        warmup.before('<h2>Definitions</h2>');
         warmup.remove();
         curr.completedStatus.passageDelete.status = true;
     } else if (iExists && pExists) {
         instructions.nextUntil(passage).add(instructions).not($('p').has('strong')).remove('*');
-        $('p').has('strong').first().before($('<h2>Definitions</h2>'));
+        $('p').has('strong').first().before('<h2>Definitions</h2>');
         curr.completedStatus.passageDelete.status = true;
         curr.completedStatus.passageDelete.message = 'NOTE: first h2 tag is <h2>Passage</h2>';
     } else if (iExists & !wExists && !pExists) {
@@ -507,8 +501,7 @@ var addDivsAround = function (acc, curr, arrIndex, $, gs) {
     var pExists = gs.passage.exists;
     if (gs.warmup.initExists) { // make sure gs.warup.exists isn't updated between the replaceText() function and here.
         if (dExists) {
-            definitions.before( $('<div class="definitions-container"></div>') );
-            var dcontain = $('.definitions-container').first();
+            var dcontain = $('<div class="definitions-container"></div>');
             definitions.nextUntil(passage).prependTo(dcontain);
             curr.completedStatus.passageDivDefinition.status = true;
         } else {
@@ -524,13 +517,13 @@ var addDivsAround = function (acc, curr, arrIndex, $, gs) {
         passage.before($('<div class="passage-container"></div>'));
         var pcontain = $('.passage-container');
         if (passage.nextAll().text() === '') {
-            if (acc.options.currentFile.includes('FP_W3_DE_T2_')) {console.log(`in ${acc.options.currentFile} on row ${arrIndex+indexOffset} it says ${$(passage.nextAll().last())}`);}
             pcontain.prepend(passage);
             // console.log(`in ${acc.options.currentFile} on row ${arrIndex+indexOffset} it says ${passage.text()}`);
             curr.completedStatus.passageDivPassage.status = true;
         } else {
-            pcontain.prepend(passage.nextAll());
+            passage.nextAll().add(passage).prependTo(pcontain);
             curr.completedStatus.passageDivPassage.status = true;
+            if (acc.options.currentFile.includes('FP_W3_DE_T2_')) {console.log(`in ${acc.options.currentFile} on row ${arrIndex+indexOffset} it says ${$(passage.nextAll().last())}`);}
         }
     } else {
         curr.completedStatus.passageDivPassage.status = true;
@@ -789,7 +782,7 @@ function main() {
     // const targetFiles = ['FP_L1_DE_T11_POC4_V1_CSS.csv','FP_R1_NA_T8_POC4_V1_CSS.csv','FP_S1_NA_T9_POC4_V1_CSS.csv','FP_W1_NE_T5_POC4_V1_CSS.csv']; // for testing
     var csvrOptions = { // Set Options:
         headersOut: [
-            'id', 'skill', 'level', 'difficultylevel', 'function', 'passagetext',
+            'id', 'skill', 'level', 'topic', 'difficultylevel', 'function', 'passagetext',
             'passagetexttype', 'passagetype', 'passageaudiotranscript', 'passagename',
             'questionname', 'questioncando', 'questiontext', 'questionlevelfeedback',
             'questiontype', 'questionaudiotranscript', 'answertext1', 'answertext2',
