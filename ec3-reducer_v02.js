@@ -2,6 +2,7 @@
  * Declare Dependancies
  *********************************************************************/
 // Core Libraries
+const dsv = require('d3-dsv');
 const fs = require('fs');
 const csvr = require('./main.js');
 const cheerio = require('cheerio');
@@ -17,6 +18,7 @@ if (process.argv[2] === undefined || isNaN(parseInt(process.argv[2], 10)) || pro
 var targetDirectory = `./csv-tests/ec3/ec3-production/ec3-csvs-outputs/ec3-csvs-no-errors/I_${bl[bn]}/`; // for production
 var od_noErrors = './csv-tests/ec3/ec3-production/ec3-csvs-outputs/ec3-csvs-no-errors/'; // for production
 var od_foundErrors = './csv-tests/ec3/ec3-production/ec3-csvs-outputs/ec3-csvs-found-errors/'; // for production
+var od_reports = './reports/'; // for production
 // Error Logs
 var batchArr = ['Reading', 'Listening', 'Writing', 'Speaking', 'All'];
 var batch = batchArr[bn];
@@ -27,6 +29,7 @@ var audioFilesLogReport = 'batch|filename|row|value|severity|message\n';
 var questioncandoLogReport = 'batch|filename|row|value|severity|message\n';
 var passagetexttypeLogReport = 'batch|filename|row|value|severity|message\n';
 var fixmeReport = 'batch|filename|row|value|severity|message\n';
+//  tempReport Template:::: tempReport += `${uniqueID()}|${curr.currentfile}|${arrIndex+indexOffset}|false|false|false|false\n`;
 // Other Vars
 var indexOffset = 2;
 var counter = 0;
@@ -213,11 +216,11 @@ var findLandmarks = (acc, curr, arrIndex, $) => {
         if (!gs[checker].exists) {
             // console.log(`In ${curr.currentfile} on row ${arrIndex + indexOffset} it says ${checker} doesn't exist`.padEnd(80, '.') + `\n${$('*').html()}\n`);
         }
-        // if (!gs.instructions.exists) missingLandmarksReport += `${batch}|${curr.currentfile}|${arrIndex+indexOffset}|instructions|WARNING|It looks like there is no Instructions Tag on this row!\n`;
-        if (false && !gs.definitions.exists && !gs.vocabulary.exists) missingLandmarksReport += `${batch}|${curr.currentfile}|${arrIndex+indexOffset}|definitions and vocabulary|WARNING|It looks like there is no Warm-up Landmark on this row!\n`;
-        else if (false && !gs.definitions.exists) missingLandmarksReport += `${batch}|${curr.currentfile}|${arrIndex+indexOffset}|definitions|WARNING|It looks like there is no Warm-up Landmark on this row!\n`;
+        if (!gs.instructions.exists) missingLandmarksReport += `${batch}|${curr.currentfile}|${arrIndex+indexOffset}|instructions|WARNING|It looks like there is no Instructions Tag on this row!\n`;
+        if (!gs.definitions.exists && !gs.vocabulary.exists) missingLandmarksReport += `${batch}|${curr.currentfile}|${arrIndex+indexOffset}|definitions and vocabulary|WARNING|It looks like there is no Warm-up Landmark on this row!\n`;
+        else if (!gs.definitions.exists) missingLandmarksReport += `${batch}|${curr.currentfile}|${arrIndex+indexOffset}|definitions|WARNING|It looks like there is no Warm-up Landmark on this row!\n`;
         else if (!gs.vocabulary.exists) missingLandmarksReport += `${batch}|${curr.currentfile}|${arrIndex+indexOffset}|vocabulary|WARNING|It looks like there is no vocabulary items on this row!\n`;
-        // if (!gs.passage.exists) missingLandmarksReport += `${batch}|${curr.currentfile}|${arrIndex+indexOffset}|passage|WARNING|It looks like there is no Passage Landmark on this row!\n`;
+        if (!gs.passage.exists) missingLandmarksReport += `${batch}|${curr.currentfile}|${arrIndex+indexOffset}|passage|WARNING|It looks like there is no Passage Landmark on this row!\n`;
     })();
     
     return gs;
@@ -264,18 +267,75 @@ var editPassageText = function (acc, curr, arrIndex) {
 
 
 
+/********************************************************************
+ * reducer -- Fix Cando
+ *********************************************************************/
+var fixQuestionCando = (acc, curr, arrIndex) => {
+    var lowerFilename = curr.currentfile.toLowerCase();
+    var shouldUpdateCando = lowerFilename[3] === 'r' || lowerFilename[3] === 'w';
+    if (curr.questioncando !== undefined && !curr.questioncando.toLowerCase().includes('f') && curr.questioncando !== '') {
+        questioncandoLogReport += `${batch}|${acc.options.currentFile}|${arrIndex+indexOffset}|${curr.questioncando}|NOTE: This value was changed from "${curr.questioncando}" to "".\n`;
+        curr.questioncando = '';
+    } // Below needs to be separate from the above if statement.
+    if (curr.questioncando !== undefined && shouldUpdateCando && curr.questioncando !== '') {
+        if      (curr.questioncando === 'f9') curr.questioncando = 'f10'; // f9 to f10
+        else if (curr.questioncando === 'f10') curr.questioncando = 'f11'; // f10 to f11
+        else if (curr.questioncando === 'f11') curr.questioncando = 'f9'; // f11 to f9
+        else if (curr.questioncando === 'f31') curr.questioncando = 'f30'; // f31 to f30
+    }
+};
+
+// TODO Create Error Report for this Function
+/********************************************************************
+ * reducer -- rename keys
+ *********************************************************************/
+var renameKeys = (acc, curr, arrIndex) => {
+    if (curr.questionname !== undefined && curr.questionname !== '') {
+        var pqname = curr.questionname.replace(/\s/g, ''); //remove all spaces
+        curr.questionname = pqname.replace(/passage\d+/i, '');
+        curr.passagename = pqname.replace(/question\d+/i, '');
+        curr.completedStatus.splitField.status = true;
+    } 
+};
+
+// TODO Transfer Code into this function
+/********************************************************************
+ * reducer -- split questionname
+ *********************************************************************/
+var splitQuestionName = (acc, curr, arrIndex) => {
+
+};
+
+// TODO Transfer Code into this function
+/********************************************************************
+ * reducer -- verify passagetexttype
+ *********************************************************************/
+var verifyPassageTextType = (acc, curr, arrIndex) => {
+
+};
+
+// TODO Transfer Code into this function
+/********************************************************************
+ * reducer -- verify questiontype
+ *********************************************************************/
+var verifyQuestionType = (acc, curr, arrIndex) => {
+
+};
+
+
+
 
 /********************************************************************
  * reducer -- Main
  *********************************************************************/
 var reducer = function (acc, curr, i) {
     curr.currentfile = acc.options.currentfile;
-    // TODO Fix Cando
-    // TODO Rename Keys
-    // TODO Split Question Name
-    // TODO Verify Passage Text Type Field
-    // TODO Verifty Question Type Field
-    // TODO Edit Passage Text
+    fixQuestionCando(acc, curr, i);
+    renameKeys(acc, curr, i);
+    splitQuestionName(acc, curr, i);
+    verifyPassageTextType(acc, curr, i);
+    verifyQuestionType(acc, curr, i);
+    // TODO Finish editPassageText
     editPassageText(acc, curr, i);
     acc.push(curr);
     return acc;
@@ -321,12 +381,12 @@ var writeFile = function (outputDirectory, outputName, dataToOutput) {
  *********************************************************************/
 var printReportLogs = () => {
     // writeFile(od_foundErrors, '__errorLog.txt', errorDocument); // Write Error-Log Document
-    writeFile(od_foundErrors, 'audio-file-Report.csv', audioFilesLogReport); // A record of all
-    writeFile(od_foundErrors, 'questioncando-Report.csv', questioncandoLogReport); // A record of all
-    writeFile(od_foundErrors, 'passage-text-type-Report.csv', passagetexttypeLogReport); // A record of all
-    writeFile(od_foundErrors, 'missing-html-landmarks-Report.csv', missingLandmarksReport); // A record of all
-    writeFile(od_foundErrors, 'inferred-html-landmarks-Report.csv', inferredLandmarksReport); // A record of all
-    writeFile(od_foundErrors, 'fixme-Report.csv', fixmeReport); // A record of all
+    writeFile(od_reports, 'audio-file-Report.csv', audioFilesLogReport); // A record of all
+    writeFile(od_reports, 'questioncando-Report.csv', questioncandoLogReport); // A record of all
+    writeFile(od_reports, 'passage-text-type-Report.csv', passagetexttypeLogReport); // A record of all
+    writeFile(od_reports, 'missing-html-landmarks-Report.csv', missingLandmarksReport); // A record of all
+    writeFile(od_reports, 'inferred-html-landmarks-Report.csv', inferredLandmarksReport); // A record of all
+    writeFile(od_reports, 'fixme-Report.csv', fixmeReport); // A record of all
 };
 
 /********************************************************************
