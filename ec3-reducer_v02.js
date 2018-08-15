@@ -35,7 +35,6 @@ var fixmeReport = 'batch|filename|row|value|severity|message\n';
 var uniqueStringForAudioTags = '<div class="replaceaudio">[[Replace audio file here filename.mp3]]</div>';
 var indexOffset = 2;
 var counter = 0;
-var globalTemporaryVar;
 
 
 
@@ -170,22 +169,35 @@ var findVocabulary = (acc, curr, arrIndex, $, gs) => {
     };
     if (gs.definitions.exists && gs.passage.exists) { // First Preference: Use Definitions and Passage as Landmarks to search for vocabulary words
         vocabulary.object = $(gs.definitions.object).nextUntil(gs.passage.object).filter('p').has('strong').filter(vocabFilter);
+        vocabulary.exists = true;
     } else if (gs.instructions.exists && !gs.definitions.exists && gs.passage.exists) { // Secondary Preference: Use Instructions and Passage as Landmarks
         vocabulary.object = $(gs.instructions.object).nextUntil(gs.passage.object).filter('p').has('strong').filter(vocabFilter);
-        vocabulary.inference.used = true;
-        vocabulary.inference.option = 1;
+        if (vocabulary.object.length > 0) {
+            vocabulary.exists = true;
+            vocabulary.inference.used = true;
+            vocabulary.inference.option = 1;
+        }
     } else if (gs.definitions.exists && !gs.passage.exists) { // Third Preference: Use Definitions and go to end of document
         vocabulary.object = $(gs.definitions.object).nextAll().filter('p').has('strong').filter(vocabFilter);
-        vocabulary.inference.used = true;
-        vocabulary.inference.option = 2;
+        if (vocabulary.object.length > 0) {
+            vocabulary.exists = true;
+            vocabulary.inference.used = true;
+            vocabulary.inference.option = 2;
+        }
     } else if (gs.instructions.exists && !gs.definitions.exists && !gs.passage.exists) { // Fourth Preference: Use Instructions and go to end of the document
         vocabulary.object = $(gs.instructions.object).nextAll().filter('p').has('strong').filter(vocabFilter);
-        vocabulary.inference.used = true;
-        vocabulary.inference.option = 3;
+        if (vocabulary.object.length > 0) {
+            vocabulary.exists = true;
+            vocabulary.inference.used = true;
+            vocabulary.inference.option = 3;
+        }
     } else if (!gs.instructions.exists && !gs.definitions.exists && !gs.passage.exists) { // Last Preference: Search the Whole Document
         vocabulary.object = $('body').children().filter('p').has('strong').filter(vocabFilter);
-        vocabulary.inference.used = true;
-        vocabulary.inference.option = 4;
+        if (vocabulary.object.length > 0) {
+            vocabulary.exists = true;
+            vocabulary.inference.used = true;
+            vocabulary.inference.option = 4;
+        }
     }
     if (vocabulary.exists && vocabulary.inference.used) {
         inferredLandmarksReport += `${batch}|${curr.currentfile}|${arrIndex+indexOffset}|Vocabulary and Examples (${vocabulary.inference.option}/4)|NOTE|This Set of Vocabulary and Examples was found using programmatic inference of increasing casualty (Scaled from 1-4. 4 being most casual.)\n`;
@@ -193,7 +205,7 @@ var findVocabulary = (acc, curr, arrIndex, $, gs) => {
     // if (!vocabulary.exists) console.log(`In ${curr.currentfile} on row ${arrIndex + indexOffset} it says vocabulary doesn't exist`.padEnd(80, '.') + `\n${$.html()}\n`);
     return vocabulary;
 };
-// TODO Finish this Function
+
 /********************************************************************
  * reducer -- edit passage text (HTML Stuff) -- find landmarks -- find instructions body
  *********************************************************************/
@@ -208,39 +220,51 @@ var findInstructionsBody = (acc, curr, arrIndex, $, gs) => {
     };
     if (gs.instructions.exists && gs.definitions.exists) { // First Preference: Instructions down to Warm-Up
         instructionsBody.object = gs.instructions.object.add(gs.instructions.object.nextUntil(gs.definitions.object));
-        instructionsBody.exists = true;
+        if (instructionsBody.object.length > 0) {
+            instructionsBody.exists = true;
+        }
     } else if (gs.instructions.exists && !gs.definitions.exists && gs.passage.exists) { // Second Preference: Instructions down to Passage
         instructionsBody.object = gs.instructions.object.add( gs.instructions.object.nextUntil(gs.passage.object) );
-        instructionsBody.exists = true;
-        instructionsBody.inference.used = true;
-        instructionsBody.inference.option = 1;
+        if (instructionsBody.object.length > 0) {
+            instructionsBody.exists = true;
+            instructionsBody.inference.used = true;
+            instructionsBody.inference.option = 1;
+        }
     } else if (gs.instructions.exists && !gs.definitions.exists && !gs.passage.exists) { // Third Preference: Instructions down to End of Document
         instructionsBody.object = gs.instructions.object.add( gs.instructions.object.nextAll() );
-        instructionsBody.exists = true;
-        instructionsBody.inference.used = true;
-        instructionsBody.inference.option = 2;
+        if (instructionsBody.object.length > 0) {
+            instructionsBody.exists = true;
+            instructionsBody.inference.used = true;
+            instructionsBody.inference.option = 2;
+        }
     } else if (!gs.instructions.exists && gs.definitions.exists) { // Fourth Preference: Defintions up to Links
         instructionsBody.object = gs.definitions.object.prevUntil('link');
-        instructionsBody.exists = true;
-        instructionsBody.inference.used = true;
-        instructionsBody.inference.option = 3;
+        if (instructionsBody.object.length > 0) {
+            instructionsBody.exists = true;
+            instructionsBody.inference.used = true;
+            instructionsBody.inference.option = 3;
+        }
     } else if (!gs.instructions.exists && !gs.definitions.exists && gs.passage.exists) { // Fifth Preference: Passage up to Links
         instructionsBody.object = gs.passage.object.prevUntil('link');
-        instructionsBody.exists = true;
-        instructionsBody.inference.used = true;
-        instructionsBody.inference.option = 4;
+        if (instructionsBody.object.length > 0) {
+            instructionsBody.exists = true;
+            instructionsBody.inference.used = true;
+            instructionsBody.inference.option = 4;
+        }
     } else if (!gs.instructions.exists && !gs.definitions.exists && !gs.passage.exists) { // Sixth Preference: Links down to End of Document
         instructionsBody.object = $('link').last().nextAll();
-        instructionsBody.exists = true;
-        instructionsBody.inference.used = true;
-        instructionsBody.inference.option = 5;
+        if (instructionsBody.object.length > 0) {
+            instructionsBody.exists = true;
+            instructionsBody.inference.used = true;
+            instructionsBody.inference.option = 5;
+        }
     }
     if ( instructionsBody.exists && instructionsBody.inference.used ) {
         inferredLandmarksReport += `${batch}|${curr.currentfile}|${arrIndex+indexOffset}|Instructions Body (${instructionsBody.inference.option}/5)|NOTE|The instructions body section was found using programmatic inference of increasing casualty (Scaled from 1-5. 5 being most casual).\n`;
     }
     return instructionsBody;
 };
-// TODO Finish this Function
+
 /********************************************************************
  * reducer -- edit passage text (HTML Stuff) -- find landmarks -- find definitions body
  *********************************************************************/
@@ -256,17 +280,23 @@ var findDefinitionsBody = (acc, curr, arrIndex, $, gs) => {
     if (gs.definitions.exists) {
         if (gs.passage.exists) { // First Preference: Definitions down to Passage
             definitionsBody.object = gs.definitions.object.add(gs.definitions.object.nextUntil(gs.passage.object));
-            definitionsBody.exists = true;
+            if (definitionsBody.object.length > 0) {
+                definitionsBody.exists = true;
+            }
         } else if (gs.vocabulary.exists) { // Second Preference: Definitions down to End of Vocabulary
             definitionsBody.object = gs.definitions.object.add(gs.definitions.object.nextUntil(gs.vocabulary.object.last()).add(gs.vocabulary.object.last()));
-            definitionsBody.exists = true;
-            definitionsBody.inference.used = true;
-            definitionsBody.inference.option = 1;
+            if (definitionsBody.object.length > 0) {
+                definitionsBody.exists = true;
+                definitionsBody.inference.used = true;
+                definitionsBody.inference.option = 1;
+            }
         } else if (!gs.passage.exists) { // Third Preference: Definitions down to End of Document
             definitionsBody.object = gs.definitions.object.nextAll(); // According to tests, this shouldn't have to run, but it's here just in case.
-            definitionsBody.exists = true;
-            definitionsBody.inference.used = true;
-            definitionsBody.inference.option = 2;
+            if (definitionsBody.object.length > 0) {
+                definitionsBody.exists = true;
+                definitionsBody.inference.used = true;
+                definitionsBody.inference.option = 2;
+            }
         } else {
             console.error(`In ${curr.currentfile} on row ${arrIndex+indexOffset} in the findDefinitionsBody function, there is an exception:\n${$.html()}\n`);
         }
@@ -276,7 +306,7 @@ var findDefinitionsBody = (acc, curr, arrIndex, $, gs) => {
     }
     return definitionsBody;
 };
-// TODO Finish this Function
+
 /********************************************************************
  * reducer -- edit passage text (HTML Stuff) -- find landmarks -- find definitions body
  *********************************************************************/
@@ -291,18 +321,23 @@ var findPassageBody = (acc, curr, arrIndex, $, gs) => {
     };
     if (gs.passage.exists) { // First Preference: Passage down to End of Document
         passageBody.object = gs.passage.object.add(gs.passage.object.nextAll());
-        passageBody.exists = true;
+        if (passageBody.object.length > 0) {
+            passageBody.exists = true;
+        }
     } else if (!gs.passage.exists && gs.definitionsBody.exists) { // Second Preference: End of Document up to end of definitionsBody
         passageBody.object = gs.definitionsBody.object.last().nextAll().remove(gs.definitionsBody.object.last());
-        passageBody.exists = true;
-        passageBody.inference.used = true;
-        passageBody.inference.option = 1;
+        if (passageBody.object.length > 0) {
+            passageBody.exists = true;
+            passageBody.inference.used = true;
+            passageBody.inference.option = 1;
+        }
     } else if (!gs.passage.exists && !gs.definitionsBody.exists && gs.instructionsBody.exists) { // Third Preference: End of instructions down to end of document
         passageBody.object = gs.instructionsBody.object.last().nextAll().remove(gs.instructionsBody.object.last());
-        passageBody.exists = true;
-        passageBody.inference.used = true;
-        passageBody.inference.option = 2;
-        null;
+        if (passageBody.object.length > 0) {
+            passageBody.exists = true;
+            passageBody.inference.used = true;
+            passageBody.inference.option = 2;
+        }
     }
     if (passageBody.exists && passageBody.inference.used) {
         inferredLandmarksReport += `${batch}|${curr.currentfile}|${arrIndex+indexOffset}|Passage Body (${passageBody.inference.option}/2)|NOTE|The passage body section was found using programmatic inference of increasing casualty (Scaled from 1-2. 2 being most casual).\n`;
@@ -403,7 +438,7 @@ var findLandmarks = (acc, curr, arrIndex, $) => {
         gs.instructionsBody.object = instructionsBody.object;
         return instructionsBody.object;
     };
-    gs.instructions.find();
+    gs.instructionsBody.find();
     // Select Whole Definitions Section
     gs.definitionsBody.find = () => {
         var definitionsBody = findDefinitionsBody(acc, curr, arrIndex, $, gs);
@@ -436,15 +471,15 @@ var findLandmarks = (acc, curr, arrIndex, $) => {
         return audio.object;
     };
     gs.audio.find();
-    // TODO When Definitions and Passage don't exists, log when "Write a repsone to each of the prompts below." ocurrs and then make sure it is added to the instructions section to be removed
     (() => {
-        if (!gs.instructions.exists) missingLandmarksReport += `${batch}|${curr.currentfile}|${arrIndex+indexOffset}|instructions|WARNING|It looks like there is no Instructions Tag on this row!\n`;
-        if (!gs.definitions.exists && !gs.vocabulary.exists) missingLandmarksReport += `${batch}|${curr.currentfile}|${arrIndex+indexOffset}|definitions and vocabulary|WARNING|It looks like there is no Definitions and Vocabulary section on this row!\n`;
-        else if (!gs.definitions.exists) missingLandmarksReport += `${batch}|${curr.currentfile}|${arrIndex+indexOffset}|definitions|WARNING|It looks like there is no Warm-up Landmark on this row!\n`;
-        else if (!gs.vocabulary.exists) missingLandmarksReport += `${batch}|${curr.currentfile}|${arrIndex+indexOffset}|vocabulary|WARNING|It looks like there is no vocabulary items on this row!\n`;
-        if (!gs.passage.exists) missingLandmarksReport += `${batch}|${curr.currentfile}|${arrIndex+indexOffset}|passage|WARNING|It looks like there is no Passage Landmark on this row!\n`;
+        if (!gs.instructions.exists) missingLandmarksReport += `${batch}|${curr.currentfile}|${arrIndex+indexOffset}|instructions header|NOTE|It looks like there is no INSTRUCTIONS HEADER Landmark on this row!\n`;
+        if (!gs.definitions.exists) missingLandmarksReport += `${batch}|${curr.currentfile}|${arrIndex+indexOffset}|definitions header|NOTE|It looks like there is no WARM-UP/DEFINITIONS HEADER Landmark on this row!\n`;
+        if (!gs.vocabulary.exists) missingLandmarksReport += `${batch}|${curr.currentfile}|${arrIndex+indexOffset}|vocabulary|NOTE|It looks like there are no VOCABULARY items on this row!\n`;
+        if (!gs.passage.exists) missingLandmarksReport += `${batch}|${curr.currentfile}|${arrIndex+indexOffset}|passage header|NOTE|It looks like there is no PASSAGE HEADER Landmark on this row!\n`;
+        if (!gs.instructionsBody.exists) missingLandmarksReport += `${batch}|${curr.currentfile}|${arrIndex+indexOffset}|instructions body |WARNING|It looks like there is no INSTRUCTIONS BODY Section on this row!\n`;
+        if (!gs.definitionsBody.exists) missingLandmarksReport += `${batch}|${curr.currentfile}|${arrIndex+indexOffset}|definitions body|WARNING|It looks like there is no DEFINITIONS BODY Section on this row!\n`;
+        if (!gs.passageBody.exists) missingLandmarksReport += `${batch}|${curr.currentfile}|${arrIndex+indexOffset}|passage body|WARNING|It looks like there is no PASSAGE BODY Section on this row!\n`;
     })();
-    
     return gs;
 };
 
@@ -615,7 +650,7 @@ var splitQuestionName = (acc, curr, arrIndex) => {
  *********************************************************************/
 var verifyPassageTextType = (acc, curr, arrIndex) => {
     if (curr.passagetexttype !== undefined) {
-        if (curr.passagetexttype.toLowerCase() !== 'c1' || curr.passagetexttype.toLowerCase() !== 'c2' || curr.passagetexttype.toLowerCase() !== 'c3' || curr.passagetexttype !== '') {
+        if ( !(curr.passagetexttype.toLowerCase() === 'c1' || curr.passagetexttype.toLowerCase() === 'c2' || curr.passagetexttype.toLowerCase() === 'c3' || curr.passagetexttype === '') ) {
             passagetexttypeLogReport += `${batch}|${curr.currentfile}|${arrIndex + indexOffset}|${curr.passagetexttype}|WARNING|This passagetexttype was set to a non-standard value. It was not changed.\n`;
         }
     }
